@@ -1,0 +1,36 @@
+.board {
+  display: grid;
+  grid-template-rows: repeat(8, 1fr);
+  grid-template-columns: repeat(8, 1fr);
+  width: 400px;
+  height: 400px;
+  border: 2px solid #333;
+  background-color: #333;
+  margin: 0 auto;
+}
+
+.board-row {
+  display: contents; /* Permite que los elementos hijos se comporten como si fueran hijos directos del contenedor grid */
+}
+
+.board-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f0d9b5;
+  border: 1px solid #555;
+}
+
+.board-cell.s {
+  background-color: #b58863;
+}
+
+.board-cell.trap {
+  background-color: #5c3b1e;
+}
+
+.piece {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}

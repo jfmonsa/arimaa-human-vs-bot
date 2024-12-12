@@ -1,0 +1,78 @@
+/* Variables */
+:root {
+  --text: #fff;
+  --bg: #00161f;
+  --primary-btn: #8ecae6;
+}
+
+/* General styles */
+body {
+  background: var(--bg);
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  margin: auto;
+  width: 80vw;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+li,
+input,
+button,
+label {
+  color: var(--text);
+}
+
+h1,
+h2 {
+  font-family: "Holtwood One SC", serif;
+}
+
+h1 {
+  text-align: center;
+  font-weight: 400;
+}
+
+h2 {
+  margin-top: 80px;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Pridi", serif;
+}
+
+p,
+label,
+input,
+button,
+code,
+ul,
+li,
+span,
+code {
+  font-family: "Nunito Sans", sans-serif;
+}
+
+code,
+span {
+  font-weight: 700;
+  color: var(--text);
+}
+
+a {
+  color: var(--primary-btn);
+}
+
+footer {
+  text-align: center;
+}

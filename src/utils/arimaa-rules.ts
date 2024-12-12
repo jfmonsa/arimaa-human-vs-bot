@@ -24,11 +24,11 @@ export type Side = typeof GOLD | typeof SILVER;
 
 export type PieceWithSide = `${Side}${Piece}` | null;
 
-export type Rank = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+// export type Rank = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
-export type File = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h";
+// export type File = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h";
 
-export type SquarePosition = `${File}${Rank}`;
+//export type SquarePosition = `${File}${Rank}`;
 
 export type GoldRank = 1 | 2;
 
@@ -36,26 +36,33 @@ export type SilverRank = 7 | 8;
 
 export class Arimaa {
   private board: PieceWithSide[][];
+  private turn: Side = GOLD;
+  private steps: [number, number][][] = [];
 
   constructor(goldSetup: Piece[], silverSetup: Piece[]) {
     this.board = this.initializeBoard(goldSetup, silverSetup);
   }
 
+  /** place gold and silver pieces on the board for the initial setup */
   private initializeBoard(
     goldSetup: Piece[],
     silverSetup: Piece[]
   ): PieceWithSide[][] {
     const board = genEmptyBoard();
-
-    // Colocar las piezas de GOLD en las dos primeras filas
     this.placePieces(board, GOLD, goldSetup, 1, 2);
-
-    // Colocar las piezas de SILVER en las dos últimas filas
     this.placePieces(board, SILVER, silverSetup, 7, 8);
 
     return board;
   }
 
+  /**
+   * Places pieces on the board for a given player according to the provided setup.
+   *
+   * @remarks
+   * This function modifies the board by placing the pieces for the specified player
+   * in the given rows. The setup array should contain the pieces in the order they
+   * should be placed on the board.
+   */
   private placePieces(
     board: PieceWithSide[][],
     player: Side,
@@ -68,10 +75,43 @@ export class Arimaa {
 
     rows.forEach((row) => {
       for (let col = 1; col <= 8; col++) {
-        board[row-1][col-1] = `${player}${setup[index]}`;
+        board[row - 1][col - 1] = `${player}${setup[index]}`;
         index++;
       }
     });
+  }
+
+  /** Excecute an step of the turn of a player */
+  public makeMove(from: [number, number], to: [number, number]): boolean {
+    if (this.validateMove(from, to)) {
+      this.board[to[0]][to[1]] = this.board[from[0]][from[1]];
+      this.board[from[0]][from[1]] = null;
+      this.steps.push([from, to]);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Ends the current player's turn if the number of steps taken is between 1 and 4.
+   *
+   * @throws {Error} If the number of steps is not between 1 and 4.
+   */
+  public endTurn(): void {
+    if (this.steps.length > 0 && this.steps.length <= 4) {
+      this.turn = this.turn === GOLD ? SILVER : GOLD;
+      this.steps = [];
+    } else {
+      throw new Error("A turn must consist of 1 to 4 steps.");
+    }
+  }
+
+  /**
+   * Ends the current player's turn and switches to the other player.
+   */
+  public giveUpTurn(): void {
+    this.turn = this.turn === GOLD ? SILVER : GOLD;
+    this.steps = [];
   }
 
   // Método para validar movimientos
@@ -80,18 +120,9 @@ export class Arimaa {
     return true;
   }
 
-  // Método para ejecutar movimientos
-  public makeMove(from: [number, number], to: [number, number]): boolean {
-    if (this.validateMove(from, to)) {
-      // Mover la pieza en el tablero
-      this.board[to[0]][to[1]] = this.board[from[0]][from[1]];
-      this.board[from[0]][from[1]] = null;
-      return true;
-    }
-    return false;
-  }
-
-  // Método para imprimir el tablero (opcional, para depuración)
+  /**
+   * print board for debugging purpouses
+   */
   public ascii(): string {
     return this.board
       .map((row) => row.map((cell) => cell || ".").join(" "))
@@ -100,5 +131,9 @@ export class Arimaa {
 
   public getBoard(): PieceWithSide[][] {
     return this.board;
+  }
+
+  public getTurn(): Side {
+    return this.turn;
   }
 }

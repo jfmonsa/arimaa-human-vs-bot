@@ -17,11 +17,20 @@ export default function App() {
     console.log(newGame.ascii());
   }, []);
 
+  const handleMakeMove = (
+    from: [number, number],
+    to: [number, number]
+  ): boolean => {
+    if (game) {
+      return game.makeMove(from, to);
+    }
+    return false;
+  };
+
   return (
     <>
       <h1> Arimmaa Game: Human vs Computer</h1>
-      <Board board={game?.getBoard()} />
-      {/* {game && <pre>{game.ascii()}</pre>} */}
+      <Board board={game?.getBoard()} makeMove={handleMakeMove} />
     </>
   );
 }

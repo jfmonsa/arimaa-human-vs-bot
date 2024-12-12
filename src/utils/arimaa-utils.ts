@@ -37,6 +37,18 @@ export function genEmptyBoard(): PieceWithSide[][] {
   return Array.from({ length: 8 }, () => Array(8).fill(null));
 }
 
+export const isTrap = (row: number, col: number) => {
+  const trapPositions: [number, number][] = [
+    [2, 2], // c3
+    [2, 5], // f3
+    [5, 2], // c6
+    [5, 5], // f6
+  ];
+
+  return trapPositions.some(
+    ([trapRow, trapCol]) => trapRow === row && trapCol === col
+  );
+};
 /*
 export function piecePositionToIndex(
   position: SquarePosition

@@ -1,39 +1,40 @@
-import React from "react";
-import { Cell, GOLD, Side } from "../utils/arimaa-rules";
-import { genEmptyBoard } from "../utils/arimaa-utils";
+import { useState } from "react";
+import { PieceWithSide, GOLD } from "../utils/arimaa-rules";
+import { genEmptyBoard, isTrap } from "../utils/arimaa-utils";
 import Styles from "./Board.module.css";
 
-interface BoardProps {
-  board?: Cell[][];
-  side?: Side;
-  disabled?: boolean;
-}
-
-const trapPositions: [number, number][] = [
-  [2, 2], // c3
-  [2, 5], // f3
-  [5, 2], // c6
-  [5, 5], // f6
-];
-
-const getPieceImage = (cell: Cell | null) => {
+const getPieceImage = (cell: PieceWithSide | null) => {
   if (!cell) return null;
   const piece = cell[1].toLowerCase();
   const player = cell[0] === GOLD ? "g" : "s";
   return `/Arimaa_${piece}${player}.svg`;
 };
 
-const isTrap = (row: number, col: number) => {
-  return trapPositions.some(
-    ([trapRow, trapCol]) => trapRow === row && trapCol === col
-  );
-};
+interface BoardProps {
+  board?: PieceWithSide[][];
+  makeMove?: (from: [number, number], to: [number, number]) => boolean;
+  // side?: Side;
+  // disabled?: boolean;
+}
 
-export function Board({
-  board = genEmptyBoard(),
-  side = GOLD,
-  disabled = false,
-}: BoardProps) {
+export function Board({ board = genEmptyBoard(), makeMove }: BoardProps) {
+  const [selectedCell, setSelectedCell] = useState<[number, number] | null>(
+    null
+  );
+
+  const handleCellClick = (row: number, col: number) => {
+    if (selectedCell) {
+      if (!makeMove) return;
+      // Si ya hay una celda seleccionada, intenta hacer el movimiento
+      if (makeMove(selectedCell, [row, col])) {
+        setSelectedCell(null); // Reinicia la selección después de un movimiento exitoso
+      }
+    } else {
+      // Selecciona la celda inicial
+      setSelectedCell([row, col]);
+    }
+  };
+
   return (
     <div className={Styles.board}>
       {board.map((row, rowIndex) => (
@@ -43,7 +44,14 @@ export function Board({
               key={colIndex}
               className={`${Styles["board-cell"]} ${
                 isTrap(rowIndex, colIndex) ? Styles.trap : ""
+              } ${
+                selectedCell &&
+                selectedCell[0] === rowIndex &&
+                selectedCell[1] === colIndex
+                  ? Styles.selected
+                  : ""
               }`}
+              onClick={() => handleCellClick(rowIndex, colIndex)}
             >
               {cell && (
                 <img

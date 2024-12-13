@@ -391,6 +391,56 @@ export class Arimaa {
   }
 
   /**
+   * Simulates a move on the Arimaa board and returns a new Arimaa instance
+   * with the updated state after the move. (copy of the game state)
+   *
+   * @param move - A tuple containing the starting and ending positions of the move.
+   * @returns A new Arimaa instance with the board state after the move.
+   */
+  public simulateMove(move: [Position, Position]): Arimaa {
+    const copy = new Arimaa([], []);
+    copy.board = this.board.map((row) => row.slice());
+    copy.turn = this.turn;
+    copy.moveCount = this.moveCount;
+    copy.steps = this.steps.map((step) => step.slice());
+    copy.makeMove(move[0], move[1]);
+    return copy;
+  }
+
+  /**
+   * Generates all legal moves for the current player based on the current board state.
+   *
+   * @returns An array of tuples, where each tuple contains two `Position` arrays. `from` and `to`
+   */
+  public generateLegalMoves(): [Position, Position][] {
+    const moves: [Position, Position][] = [];
+    for (let x = 0; x < 8; x++) {
+      for (let y = 0; y < 8; y++) {
+        const piece = this.board[x][y];
+        if (piece && piece[0] === this.turn) {
+          const neighbors: Position[] = [
+            [x - 1, y],
+            [x + 1, y],
+            [x, y - 1],
+            [x, y + 1],
+          ];
+          neighbors.forEach(([nx, ny]) => {
+            if (nx >= 0 && nx < 8 && ny >= 0 && ny < 8) {
+              if (this.validateMove([x, y], [nx, ny])) {
+                moves.push([
+                  [x, y],
+                  [nx, ny],
+                ]);
+              }
+            }
+          });
+        }
+      }
+    }
+    return moves;
+  }
+
+  /**
    * print board for debugging purpouses
    */
   public ascii(): string {

@@ -65,3 +65,12 @@ export function minimax(
     return { score: minEval, moves: bestMoves };
   }
 }
+
+// Abstracts the minimax algorithm to get the best move.
+export function getBestMove(
+  game: Arimaa,
+  depth: number
+): [Position, Position][] {
+  const { moves } = minimax(game, depth, true);
+  return moves;
+}

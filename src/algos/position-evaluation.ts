@@ -1,5 +1,15 @@
-import { Arimaa, CAMEL, CAT, DOG, ELEPHANT, GOLD, HORSE, RABBIT, Side, SILVER } from "../utils/arimaa-rules";
-
+import {
+  Arimaa,
+  CAMEL,
+  CAT,
+  DOG,
+  ELEPHANT,
+  GOLD,
+  HORSE,
+  RABBIT,
+  Side,
+  SILVER,
+} from "../utils/arimaa-rules";
 
 // Valores de las piezas para la evaluación
 const PIECE_VALUES: Record<string, number> = {
@@ -147,34 +157,3 @@ function countPotentialMoves(game: Arimaa, position: [number, number]): number {
     );
   }).length;
 }
-
-// Ejemplo de uso
-// function exampleUsage() {
-//   // Configuración de ejemplo
-//   const goldSetup = [
-//     RABBIT,
-//     RABBIT,
-//     RABBIT,
-//     RABBIT,
-//     RABBIT,
-//     RABBIT,
-//     RABBIT,
-//     RABBIT,
-//   ];
-//   const silverSetup = [
-//     RABBIT,
-//     RABBIT,
-//     RABBIT,
-//     RABBIT,
-//     RABBIT,
-//     RABBIT,
-//     RABBIT,
-//     RABBIT,
-//   ];
-
-//   const game = new Arimaa(goldSetup, silverSetup);
-
-//   // Evaluar el tablero desde la perspectiva de Oro
-//   const evaluation = evaluateBoard(game, GOLD);
-//   console.log("Evaluación del tablero:", evaluation);
-// }

@@ -120,8 +120,8 @@ export class Arimaa {
 
     if (!this.validateMove(from, to)) return false;
 
-    const piece = this.board[from[0]][from[1]];
-    const targetPiece = this.board[to[0]][to[1]];
+    const piece = this.getPiece(from);
+    const targetPiece = this.getPiece(to);
 
     // Handle push/pull
     if (targetPiece) {
@@ -142,26 +142,26 @@ export class Arimaa {
         this.board[pullTarget[0]][pullTarget[1]] === null;
 
       if (isPushTargetEmpty) {
-        // Push: Move target to next square and piece to target square
-        this.board[pushTarget[0]][pushTarget[1]] = targetPiece;
-        this.board[to[0]][to[1]] = piece;
-        this.board[from[0]][from[1]] = null;
+        this.movePiece(to, pushTarget, targetPiece); // Move target to next square
+        this.movePiece(from, to, piece); // Move piece to target square
       } else if (isPullTargetEmpty) {
-        // Pull: Move piece to target square and target to previous square
-        this.board[pullTarget[0]][pullTarget[1]] = targetPiece;
-        this.board[to[0]][to[1]] = piece;
-        this.board[from[0]][from[1]] = null;
+        // is this correct?
+        this.movePiece(to, pullTarget, piece); // Move piece to target square
+        this.movePiece(from, to, targetPiece); // Move target to previous square
+
+        // or what is correct?
+        //this.movePiece(from, to, piece);
+        //this.movePiece(to, pullTarget, targetPiece);
       } else {
         // Invalid move if neither push nor pull is possible
         return false;
       }
     } else {
       // Normal move
-      this.board[to[0]][to[1]] = piece;
-      this.board[from[0]][from[1]] = null;
+      this.movePiece(from, to, piece);
     }
 
-    this.board[from[0]][from[1]] = null;
+    this.removePiece(from);
     this.steps.push([from, to]);
 
     this.handleTraps();
@@ -172,6 +172,35 @@ export class Arimaa {
     }
 
     return true;
+  }
+
+  /**
+   * Moves a piece from one position to another on the Arimaa board.
+   */
+  private movePiece(from: Position, to: Position, piece: PieceWithSide): void {
+    this.putPiece(to, piece);
+    this.removePiece(from);
+  }
+
+  /**
+   * Places a piece on the board at the specified position.
+   */
+  public putPiece(position: Position, piece: PieceWithSide): void {
+    this.board[position[0]][position[1]] = piece;
+  }
+
+  /**
+   * Retrieves the piece located at the specified position on the board.
+   */
+  public getPiece(position: Position): PieceWithSide {
+    return this.board[position[0]][position[1]];
+  }
+
+  /**
+   * Removes a piece from the specified position on the board.
+   */
+  public removePiece(position: Position): void {
+    this.putPiece(position, null);
   }
 
   /**
@@ -198,7 +227,8 @@ export class Arimaa {
     )
       return false;
 
-    const piece = this.board[fx][fy];
+    const piece = this.getPiece(from);
+
     if (!piece || piece[0] !== this.turn) return false; // Not your turn or empty square
 
     const dx = Math.abs(fx - tx);
@@ -216,7 +246,8 @@ export class Arimaa {
     }
 
     // Handle pushing or pulling
-    const targetPiece = this.board[tx][ty];
+    const targetPiece = this.getPiece(to);
+
     if (targetPiece) {
       if (targetPiece[0] === this.turn) return false; // Can't push/pull friendly pieces
       // Validate push/pull logic
@@ -297,9 +328,9 @@ export class Arimaa {
    */
   private handleTraps(): void {
     TRAP_SQUARES.forEach(([x, y]) => {
-      const piece = this.board[x][y];
+      const piece = this.getPiece([x, y]);
       if (piece && !this.hasFriendlyNeighbor([x, y], piece[0] as Side)) {
-        this.board[x][y] = null;
+        this.removePiece([x, y]);
       }
     });
   }
@@ -417,7 +448,7 @@ export class Arimaa {
     const moves: [Position, Position][] = [];
     for (let x = 0; x < 8; x++) {
       for (let y = 0; y < 8; y++) {
-        const piece = this.board[x][y];
+        const piece = this.getPiece([x, y]);
         if (piece && piece[0] === this.turn) {
           const neighbors: Position[] = [
             [x - 1, y],

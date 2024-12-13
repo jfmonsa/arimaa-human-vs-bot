@@ -30,6 +30,7 @@ export default function App() {
   return (
     <>
       <h1> Arimmaa Game: Human vs Computer</h1>
+      <p>Turn: {game?.getTurn()}</p>
       <Board board={game?.getBoard()} makeMove={handleMakeMove} />
     </>
   );

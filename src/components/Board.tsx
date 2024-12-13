@@ -34,6 +34,38 @@ export function Board({ board = genEmptyBoard(), makeMove }: BoardProps) {
 
   const handleSquareClick = (row: number, col: number) => {
     const piece = board[row][col];
+
+    // prevent not beign able to select a piece after selecting an empty square
+    // if the square is empty
+    // if the square is empty
+    if (!piece) {
+      if (!squareSelected) {
+        // If there is no previously selected piece, deselect
+        setSquareSelected(null);
+      } else {
+        // If there is a previously selected piece, try to make the move
+        if (!makeMove) return;
+
+        const move = makeMove(squareSelected, [row, col]);
+
+        // If the move was successful, deselect the square
+        if (move) {
+          setSquareSelected(null);
+        }
+      }
+      return;
+    }
+
+    // prevent not being able to select a piece after a turn switch
+    if (squareSelected) {
+      // Check if the selected piece belongs to the current player
+      const selectedPiece = board[squareSelected[0]][squareSelected[1]];
+      if (selectedPiece && piece && selectedPiece[0] !== piece[0]) {
+        // Deselect if the selected piece does not belong to the current player
+        setSquareSelected(null);
+      }
+    }
+
     const isChangingSelectedPiece =
       piece &&
       squareSelected &&
@@ -57,28 +89,6 @@ export function Board({ board = genEmptyBoard(), makeMove }: BoardProps) {
         //setSquareSelectedAfterMove(sourceSquare);
         //setSquareSelectedBeforeMove(targetSquare);
       }
-
-      // Handle push/pull logic
-      // const targetPiece = board[row][col];
-      // if (piece && targetPiece && targetPiece[0] !== piece[0]) {
-      //   // Check if it's a valid push/pull move
-      //   const dx = row - squareSelected[0];
-      //   const dy = col - squareSelected[1];
-      //   const pushTarget: Position = [row + dx, col + dy];
-      //   const pullTarget: Position = [
-      //     squareSelected[0] - dx,
-      //     squareSelected[1] - dy,
-      //   ];
-
-      //   if (makeMove(squareSelected, [row, col])) {
-      //     if (
-      //       makeMove([row, col], pushTarget) ||
-      //       makeMove([row, col], pullTarget)
-      //     ) {
-      //       setSquareSelected(null);
-      //     }
-      //   }
-      // }
     }
   };
 

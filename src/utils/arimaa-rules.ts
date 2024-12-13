@@ -328,7 +328,20 @@ export class Arimaa {
     );
   }
 
-  private checkVictoryConditions(): boolean {
+  /**
+   * Checks the victory conditions for the Arimaa game.
+   *
+   * This method evaluates the current state of the board to determine if either
+   * the gold or silver player has won the game. The victory conditions checked are:
+   * 1. If a rabbit of the gold player ("gR") has reached the opposing goal row (row 7).
+   * 2. If a rabbit of the silver player ("sR") has reached the opposing goal row (row 0).
+   * 3. If either side has no rabbits left on the board.
+   *
+   * Future win conditions such as freezing all pieces or repetition rules are not yet implemented.
+   *
+   * @returns {boolean} - Returns `true` if any victory condition is met, otherwise `false`.
+   */
+  private isGameOver(): boolean {
     // Check if a rabbit reached the opposing goal row
     const goldWins = this.board[7].some((cell) => cell === "gR");
     const silverWins = this.board[0].some((cell) => cell === "sR");
@@ -354,7 +367,7 @@ export class Arimaa {
     }
 
     // Check victory conditions before switching turns
-    if (this.checkVictoryConditions()) {
+    if (this.isGameOver()) {
       console.log(`${this.turn === GOLD ? SILVER : GOLD} wins the game!`);
       return;
     }

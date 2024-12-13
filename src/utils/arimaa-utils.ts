@@ -7,6 +7,7 @@ import {
   HORSE,
   RABBIT,
   PieceWithSide,
+  TRAP_SQUARES,
 } from "./arimaa-rules";
 import { shuffleArray } from "./shuffle-array";
 
@@ -29,8 +30,7 @@ export function generateRandomArimaaSetup(): Piece[] {
     CAMEL,
     ELEPHANT,
   ];
-  const goldPieces = shuffleArray(pieces) as Piece[];
-  return goldPieces;
+  return shuffleArray(pieces) as Piece[];
 }
 
 export function genEmptyBoard(): PieceWithSide[][] {
@@ -38,14 +38,7 @@ export function genEmptyBoard(): PieceWithSide[][] {
 }
 
 export const isTrap = (row: number, col: number) => {
-  const trapPositions: [number, number][] = [
-    [2, 2], // c3
-    [2, 5], // f3
-    [5, 2], // c6
-    [5, 5], // f6
-  ];
-
-  return trapPositions.some(
+  return TRAP_SQUARES.some(
     ([trapRow, trapCol]) => trapRow === row && trapCol === col
   );
 };

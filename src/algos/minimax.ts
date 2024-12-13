@@ -1,67 +1,67 @@
-import { Arimaa } from "../utils/arimaa-rules";
+import { Arimaa, Position } from "../utils/arimaa-rules";
+import { evaluateBoard } from "./position-evaluation";
 
+/**
+ * Minimax algorithm to decide the best move for the current player.
+ * @param game - The current state of the Arimaa game.
+ * @param depth - The depth of the search tree.
+ * @param maximizingPlayer - Whether the current player is maximizing or minimizing.
+ * @returns The best sequence of moves and its evaluation score.
+ */
 export function minimax(
   game: Arimaa,
   depth: number,
   maximizingPlayer: boolean,
   alpha: number = -Infinity,
   beta: number = Infinity
-): { score: number; move?: Move } {
-  // Casos base
+): { score: number; moves: [Position, Position][] } {
   if (depth === 0 || game.isGameOver()) {
-    return { score: game.evaluateBoard() };
+    // TODO: pass side dinamically
+    return { score: evaluateBoard(game, "g"), moves: [] };
   }
-
-  // Genera todos los movimientos posibles
-  const moves = game.generateMoves();
+  const legalMoves = game.generateLegalMoves();
 
   if (maximizingPlayer) {
     let maxEval = -Infinity;
-    let bestMove: Move | undefined;
+    let bestMoves: [Position, Position][] = [];
 
-    for (const move of moves) {
-      const gameCopy = game.makeMoveCopy(move);
-      const { score } = minimax(gameCopy, depth - 1, false, alpha, beta);
+    for (const move of legalMoves) {
+      const clonedGame = game.clone(); // Clone the game state.
+      clonedGame.applyMoves([move]); // Apply the move.
+      const { score } = minimax(clonedGame, depth - 1, false, alpha, beta);
 
       if (score > maxEval) {
         maxEval = score;
-        bestMove = move;
+        bestMoves = [move];
       }
 
-      // Poda alfa-beta
-      alpha = Math.max(alpha, score);
+      alpha = Math.max(alpha, maxEval);
       if (beta <= alpha) {
-        break; // Corte beta
+        break; // Beta cut-off.
       }
     }
 
-    return { score: maxEval, move: bestMove };
+    return { score: maxEval, moves: bestMoves };
   } else {
     let minEval = Infinity;
-    let bestMove: Move | undefined;
+    let bestMoves: [Position, Position][] = [];
 
-    for (const move of moves) {
-      const gameCopy = game.makeMoveCopy(move);
-      const { score } = minimax(gameCopy, depth - 1, true, alpha, beta);
+    for (const move of legalMoves) {
+      const clonedGame = game.clone(); // Clone the game state.
+      clonedGame.applyMoves([move]); // Apply the move.
+      const { score } = minimax(clonedGame, depth - 1, true, alpha, beta);
 
       if (score < minEval) {
         minEval = score;
-        bestMove = move;
+        bestMoves = [move];
       }
 
-      // Poda alfa-beta
-      beta = Math.min(beta, score);
+      beta = Math.min(beta, minEval);
       if (beta <= alpha) {
-        break; // Corte alfa
+        break; // Alpha cut-off.
       }
     }
 
-    return { score: minEval, move: bestMove };
+    return { score: minEval, moves: bestMoves };
   }
-}
-
-// Función para obtener el mejor movimiento
-export function getBestMove(game: Arimaa, depth: number): Move | undefined {
-  const { move } = minimax(game, depth, true);
-  return move;
 }

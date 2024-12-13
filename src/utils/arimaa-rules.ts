@@ -341,7 +341,7 @@ export class Arimaa {
    *
    * @returns {boolean} - Returns `true` if any victory condition is met, otherwise `false`.
    */
-  private isGameOver(): boolean {
+  public isGameOver(): boolean {
     // Check if a rabbit reached the opposing goal row
     const goldWins = this.board[7].some((cell) => cell === "gR");
     const silverWins = this.board[0].some((cell) => cell === "sR");
@@ -373,9 +373,13 @@ export class Arimaa {
     }
 
     // Switch turn
-    this.turn = this.turn === GOLD ? SILVER : GOLD;
+    this.switchTurn();
     this.steps = []; // Reset steps
     this.moveCount++;
+  }
+
+  public switchTurn(): void {
+    this.turn = this.turn === GOLD ? SILVER : GOLD;
   }
 
   private getPieceStrength(piece: Piece): number {
@@ -391,20 +395,17 @@ export class Arimaa {
   }
 
   /**
-   * Simulates a move on the Arimaa board and returns a new Arimaa instance
-   * with the updated state after the move. (copy of the game state)
+   * deep copy of the Arimaa instance
    *
-   * @param move - A tuple containing the starting and ending positions of the move.
    * @returns A new Arimaa instance with the board state after the move.
    */
-  public simulateMove(move: [Position, Position]): Arimaa {
-    const copy = new Arimaa([], []);
-    copy.board = this.board.map((row) => row.slice());
-    copy.turn = this.turn;
-    copy.moveCount = this.moveCount;
-    copy.steps = this.steps.map((step) => step.slice());
-    copy.makeMove(move[0], move[1]);
-    return copy;
+  public clone(): Arimaa {
+    const clone = new Arimaa([], []);
+    clone.board = this.board.map((row) => [...row]);
+    clone.turn = this.turn;
+    clone.moveCount = this.moveCount;
+    clone.steps = this.steps.map((step) => [...step]);
+    return clone;
   }
 
   /**
@@ -438,6 +439,17 @@ export class Arimaa {
       }
     }
     return moves;
+  }
+
+  /**
+   * Applies a series of moves to the current game state.
+   *
+   * @param moves - An array of move pairs, where each pair consists of `from` and `to` positions.
+   */
+  public applyMoves(moves: Position[][]): void {
+    for (const [from, to] of moves) {
+      this.makeMove(from, to);
+    }
   }
 
   /**

@@ -123,27 +123,42 @@ export class Arimaa {
     const piece = this.board[from[0]][from[1]];
     const targetPiece = this.board[to[0]][to[1]];
 
+    // Handle push/pull
     if (targetPiece) {
-      // Handle push/pull
-      const dx = to[0] - from[0];
-      const dy = to[1] - from[1];
+      const dx = to[0] - from[0]; // +1 for right, -1 for left
+      const dy = to[1] - from[1]; // +1 for down, -1 for up
 
-      // Push: Move target to next square
+      // Determine if it's a push or pull
       const pushTarget: Position = [to[0] + dx, to[1] + dy];
-      if (this.board[pushTarget[0]][pushTarget[1]] === null) {
+      const pullTarget: Position = [from[0] - dx, from[1] - dy];
+
+      // Check if push or pull is possible
+      const isPushTargetEmpty =
+        this.board[pushTarget[0]] &&
+        this.board[pushTarget[0]][pushTarget[1]] === null;
+
+      const isPullTargetEmpty =
+        this.board[pullTarget[0]] &&
+        this.board[pullTarget[0]][pullTarget[1]] === null;
+
+      if (isPushTargetEmpty) {
+        // Push: Move target to next square and piece to target square
         this.board[pushTarget[0]][pushTarget[1]] = targetPiece;
         this.board[to[0]][to[1]] = piece;
-      }
-
-      // Pull: Move target to previous square
-      const pullTarget: Position = [from[0] - dx, from[1] - dy];
-      if (this.board[pullTarget[0]][pullTarget[1]] === null) {
+        this.board[from[0]][from[1]] = null;
+      } else if (isPullTargetEmpty) {
+        // Pull: Move piece to target square and target to previous square
         this.board[pullTarget[0]][pullTarget[1]] = targetPiece;
         this.board[to[0]][to[1]] = piece;
+        this.board[from[0]][from[1]] = null;
+      } else {
+        // Invalid move if neither push nor pull is possible
+        return false;
       }
     } else {
       // Normal move
       this.board[to[0]][to[1]] = piece;
+      this.board[from[0]][from[1]] = null;
     }
 
     this.board[from[0]][from[1]] = null;
@@ -204,21 +219,16 @@ export class Arimaa {
     const targetPiece = this.board[tx][ty];
     if (targetPiece) {
       if (targetPiece[0] === this.turn) return false; // Can't push/pull friendly pieces
-
       // Validate push/pull logic
       const strength = this.getPieceStrength(piece[1] as Piece);
       const targetStrength = this.getPieceStrength(targetPiece[1] as Piece);
-
       if (strength <= targetStrength) return false; // Can only move weaker pieces
-
       // Check for valid push/pull positions
       const pushPullValid = this.validatePushPull(from, to, targetPiece);
       if (!pushPullValid) return false;
     }
-
     // Target square must be empty unless pushing/pulling
     if (!targetPiece && this.board[tx][ty]) return false;
-
     return true;
   }
 
@@ -227,42 +237,45 @@ export class Arimaa {
     return x >= 0 && x < 8 && y >= 0 && y < 8;
   }
 
+  /**
+   * Validates whether a push or pull move is possible from the given position.
+   *
+   * A push move requires the target piece to have an empty space to move into.
+   * A pull move requires the original position to have an empty space in the opposite direction.
+   *
+   * @param from - The starting position of the piece.
+   * @param to - The ending position of the piece.
+   * @param targetPiece - The piece being pushed or pulled, including its side.
+   * @returns `true` if the push or pull move is valid, otherwise `false`.
+   */
   private validatePushPull(
     from: Position,
     to: Position,
-    targetPiece: PieceWithSide
+    _targetPiece: PieceWithSide
   ): boolean {
+    // TODO: verify if _targetPiece is needed
+
     const [fx, fy] = from;
     const [tx, ty] = to;
-
     // Determine the direction of the move
-    const dx = tx - fx;
-    const dy = ty - fy;
-
+    const dx = tx - fx; // +1 for right, -1 for left
+    const dy = ty - fy; // +1 for down, -1 for up
     // Validate push (target must have an empty space to move into)
     const pushTarget: Position = [tx + dx, ty + dy];
     if (
-      pushTarget[0] >= 0 &&
-      pushTarget[0] < 8 &&
-      pushTarget[1] >= 0 &&
-      pushTarget[1] < 8 &&
+      this.checkIfPositionIsInBoard(pushTarget) &&
       !this.board[pushTarget[0]][pushTarget[1]]
     ) {
       return true;
     }
-
     // Validate pull (from must have an empty space in the opposite direction)
     const pullTarget: Position = [fx - dx, fy - dy];
     if (
-      pullTarget[0] >= 0 &&
-      pullTarget[0] < 8 &&
-      pullTarget[1] >= 0 &&
-      pullTarget[1] < 8 &&
+      this.checkIfPositionIsInBoard(pullTarget) &&
       !this.board[pullTarget[0]][pullTarget[1]]
     ) {
       return true;
     }
-
     return false;
   }
 

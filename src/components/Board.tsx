@@ -34,13 +34,18 @@ export function Board({ board = genEmptyBoard(), makeMove }: BoardProps) {
 
   const handleSquareClick = (row: number, col: number) => {
     const piece = board[row][col];
-    const isChangingSelectedPiece = piece && squareSelected;
+    const isChangingSelectedPiece =
+      piece &&
+      squareSelected &&
+      piece[0] === board[squareSelected[0]][squareSelected[1]]?.[0]; // pieces are from the same player
 
     if (!squareSelected) {
       setSquareSelected([row, col]);
     } else if (isChangingSelectedPiece) {
+      console.log("Changing selected piece");
       setSquareSelected([row, col]);
     } else {
+      console.log("Trying to make a move");
       if (!makeMove) return;
 
       const move = makeMove(squareSelected, [row, col]);
@@ -48,9 +53,32 @@ export function Board({ board = genEmptyBoard(), makeMove }: BoardProps) {
       // move was successful
       if (move) {
         setSquareSelected(null);
+        return;
         //setSquareSelectedAfterMove(sourceSquare);
         //setSquareSelectedBeforeMove(targetSquare);
       }
+
+      // Handle push/pull logic
+      // const targetPiece = board[row][col];
+      // if (piece && targetPiece && targetPiece[0] !== piece[0]) {
+      //   // Check if it's a valid push/pull move
+      //   const dx = row - squareSelected[0];
+      //   const dy = col - squareSelected[1];
+      //   const pushTarget: Position = [row + dx, col + dy];
+      //   const pullTarget: Position = [
+      //     squareSelected[0] - dx,
+      //     squareSelected[1] - dy,
+      //   ];
+
+      //   if (makeMove(squareSelected, [row, col])) {
+      //     if (
+      //       makeMove([row, col], pushTarget) ||
+      //       makeMove([row, col], pullTarget)
+      //     ) {
+      //       setSquareSelected(null);
+      //     }
+      //   }
+      // }
     }
   };
 

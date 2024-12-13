@@ -1,37 +1,56 @@
 import { useState } from "react";
-import { PieceWithSide, GOLD } from "../utils/arimaa-rules";
+import { PieceWithSide, GOLD, Position, SILVER } from "../utils/arimaa-rules";
 import { genEmptyBoard, isTrap } from "../utils/arimaa-utils";
 import Styles from "./Board.module.css";
 
 const getPieceImage = (cell: PieceWithSide | null) => {
   if (!cell) return null;
   const piece = cell[1].toLowerCase();
-  const player = cell[0] === GOLD ? "g" : "s";
+  const player = cell[0] === GOLD ? GOLD : SILVER;
   return `/Arimaa_${piece}${player}.svg`;
 };
 
 interface BoardProps {
   board?: PieceWithSide[][];
-  makeMove?: (from: [number, number], to: [number, number]) => boolean;
+  makeMove?: (from: Position, to: Position) => boolean;
   // side?: Side;
   // disabled?: boolean;
 }
 
 export function Board({ board = genEmptyBoard(), makeMove }: BoardProps) {
-  const [selectedCell, setSelectedCell] = useState<[number, number] | null>(
-    null
-  );
+  /** Represents the currently selected square. */
+  const [squareSelected, setSquareSelected] = useState<Position | null>(null);
 
-  const handleCellClick = (row: number, col: number) => {
-    if (selectedCell) {
-      if (!makeMove) return;
-      // Si ya hay una celda seleccionada, intenta hacer el movimiento
-      if (makeMove(selectedCell, [row, col])) {
-        setSelectedCell(null); // Reinicia la selección después de un movimiento exitoso
-      }
+  /** Represents the currently selected piece. */
+  //const [selectedPiece, setSelectedPiece] = useState<string | null>(null);
+
+  /** Represents the square selected after a move (source square). */
+  // const [squareSelectedAfterMove, setSquareSelectedAfterMove] =
+  //   useState<Position | null>(null);
+
+  /** Represents the square selected before a move (target square). */
+  // const [squareSelectedBeforeMove, setSquareSelectedBeforeMove] =
+  //   useState<Position | null>(null);
+
+  const handleSquareClick = (row: number, col: number) => {
+    const piece = board[row][col];
+    const isChangingSelectedPiece = piece && squareSelected;
+
+    if (!squareSelected) {
+      setSquareSelected([row, col]);
+    } else if (isChangingSelectedPiece) {
+      setSquareSelected([row, col]);
     } else {
-      // Selecciona la celda inicial
-      setSelectedCell([row, col]);
+      if (!makeMove) return;
+
+      const move = makeMove(squareSelected, [row, col]);
+
+      // move was successful
+      if (move) {
+        setSquareSelected(null);
+        //setSquareSelectedAfterMove(sourceSquare);
+        //setSquareSelectedBeforeMove(targetSquare);
+      }
     }
   };
 
@@ -45,19 +64,25 @@ export function Board({ board = genEmptyBoard(), makeMove }: BoardProps) {
               className={`${Styles["board-cell"]} ${
                 isTrap(rowIndex, colIndex) ? Styles.trap : ""
               } ${
-                selectedCell &&
-                selectedCell[0] === rowIndex &&
-                selectedCell[1] === colIndex
+                squareSelected &&
+                squareSelected[0] === rowIndex &&
+                squareSelected[1] === colIndex
                   ? Styles.selected
                   : ""
               }`}
-              onClick={() => handleCellClick(rowIndex, colIndex)}
+              onClick={() => handleSquareClick(rowIndex, colIndex)}
             >
               {cell && (
-                <img
-                  src={getPieceImage(cell) || ""}
-                  alt={cell}
-                  className={Styles["piece"]}
+                <div
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    backgroundImage: `url(${getPieceImage(cell) || ""})`,
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "center",
+                    backgroundSize: "80%",
+                    cursor: "grab",
+                  }}
                 />
               )}
             </div>

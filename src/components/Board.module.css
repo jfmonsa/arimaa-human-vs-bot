@@ -29,13 +29,6 @@
   background-color: #5c3b1e;
 }
 
-.piece {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  cursor: grab;
-}
-
 .board-cell.selected {
-  outline: 2px solid #00f;
+  background-color: rgba(251, 255, 12, 0.6);
 }

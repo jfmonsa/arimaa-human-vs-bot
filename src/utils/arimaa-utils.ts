@@ -42,17 +42,3 @@ export const isTrap = (row: number, col: number) => {
     ([trapRow, trapCol]) => trapRow === row && trapCol === col
   );
 };
-/*
-export function piecePositionToIndex(
-  position: SquarePosition
-): [number, number] {
-  const file = position.charCodeAt(0) - "a".charCodeAt(0);
-  const rank = 8 - parseInt(position[1]);
-  return [rank, file];
-}
-
-export function pieceIndexToPosition(index: [number, number]): SquarePosition {
-  const file = String.fromCharCode(index[1] + "a".charCodeAt(0));
-  const rank = 8 - index[0];
-  return `${file}${rank}` as SquarePosition;
-}*/

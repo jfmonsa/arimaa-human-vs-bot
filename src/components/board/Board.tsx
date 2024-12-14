@@ -1,6 +1,11 @@
 import { useState } from "react";
-import { PieceWithSide, GOLD, Position, SILVER } from "../utils/arimaa-rules";
-import { genEmptyBoard, isTrap } from "../utils/arimaa-utils";
+import {
+  PieceWithSide,
+  GOLD,
+  Position,
+  SILVER,
+} from "../../utils/arimaa-rules";
+import { genEmptyBoard, isTrap } from "../../utils/arimaa-utils";
 import Styles from "./Board.module.css";
 
 const getPieceImage = (cell: PieceWithSide | null) => {
@@ -49,7 +54,9 @@ export function Board({ board = genEmptyBoard(), makeMove }: BoardProps) {
         const move = makeMove(squareSelected, [row, col]);
 
         // If the move was successful, deselect the square
+        console.log("Casi aquí");
         if (move) {
+          console.log("Aquí");
           setSquareSelected(null);
         }
       }

@@ -56,17 +56,17 @@ export class Arimaa {
    * The `steps` array keeps track of these steps for the current turn. Each step is represented as a tuple of
    * two positions: the starting position and the ending position.
    *
-   * @example
-   * // Example of steps for a turn:
-   * // Move a piece from (2, 3) to (2, 4), then from (2, 4) to (2, 5)
-   * this.steps = [
-   *   [[2, 3], [2, 4]],
-   *   [[2, 4], [2, 5]]
-   * ];
-   *
-   * @type {[Position][][]}
+   * Each Player can move up to 4 times in a turn. If a player moves 4 times, the turn musth switch.
    */
   private steps: [number, number][][] = [];
+
+  /**
+   * Stores the positions of pieces that the current player must move if there are
+   * multiple pieces adjacent to a rival piece that has been pushed or pulled in
+   * the previous move. This ensures that the current player adheres to the rules
+   * of the game by moving one of the pieces stored in this array.
+   */
+  private pushPullPossiblePiecesCurentPlayerHasToMove: Position[] = [];
 
   constructor(goldSetup: Piece[], silverSetup: Piece[]) {
     this.board = this.initializeBoard(goldSetup, silverSetup);
@@ -112,56 +112,10 @@ export class Arimaa {
 
   /** Excecute an step of the turn of a player */
   public makeMove(from: Position, to: Position): boolean {
-    if (this.steps.length >= 4) {
-      console.log("Maximum steps reached for this turn.");
-      console.log(this.turn);
-      return false;
-    }
-
     if (!this.validateMove(from, to)) return false;
 
-    const piece = this.getPiece(from);
-    const targetPiece = this.getPiece(to);
+    this.movePiece(from, to, this.getPiece(from));
 
-    // Handle push/pull
-    if (targetPiece) {
-      const dx = to[0] - from[0]; // +1 for right, -1 for left
-      const dy = to[1] - from[1]; // +1 for down, -1 for up
-
-      // Determine if it's a push or pull
-      const pushTarget: Position = [to[0] + dx, to[1] + dy];
-      const pullTarget: Position = [from[0] - dx, from[1] - dy];
-
-      // Check if push or pull is possible
-      const isPushTargetEmpty =
-        this.board[pushTarget[0]] &&
-        this.board[pushTarget[0]][pushTarget[1]] === null;
-
-      const isPullTargetEmpty =
-        this.board[pullTarget[0]] &&
-        this.board[pullTarget[0]][pullTarget[1]] === null;
-
-      if (isPushTargetEmpty) {
-        this.movePiece(to, pushTarget, targetPiece); // Move target to next square
-        this.movePiece(from, to, piece); // Move piece to target square
-      } else if (isPullTargetEmpty) {
-        // is this correct?
-        this.movePiece(to, pullTarget, piece); // Move piece to target square
-        this.movePiece(from, to, targetPiece); // Move target to previous square
-
-        // or what is correct?
-        //this.movePiece(from, to, piece);
-        //this.movePiece(to, pullTarget, targetPiece);
-      } else {
-        // Invalid move if neither push nor pull is possible
-        return false;
-      }
-    } else {
-      // Normal move
-      this.movePiece(from, to, piece);
-    }
-
-    this.removePiece(from);
     this.steps.push([from, to]);
 
     this.handleTraps();
@@ -183,42 +137,31 @@ export class Arimaa {
   }
 
   /**
-   * Places a piece on the board at the specified position.
-   */
-  public putPiece(position: Position, piece: PieceWithSide): void {
-    this.board[position[0]][position[1]] = piece;
-  }
-
-  /**
-   * Retrieves the piece located at the specified position on the board.
-   */
-  public getPiece(position: Position): PieceWithSide {
-    return this.board[position[0]][position[1]];
-  }
-
-  /**
-   * Removes a piece from the specified position on the board.
-   */
-  public removePiece(position: Position): void {
-    this.putPiece(position, null);
-  }
-
-  /**
    * Validates a move from one position to another on the Arimaa board.
    *
    * @param from - The starting position as a tuple [x, y].
    * @param to - The target position as a tuple [x, y].
    * @returns `true` if the move is valid, `false` otherwise.
-   *
-   * The move is considered valid if:
-   * - The starting position contains a piece belonging to the current player.
-   * - The move is orthogonal (not diagonal) and only one square away.
-   * - Rabbits do not move backward.
-   * - The target square is empty.
    */
   public validateMove(from: Position, to: Position): boolean {
     const [fx, fy] = from;
     const [tx, ty] = to;
+
+    // Check if previous move was a push or pull
+    // Check if there are pieces that the current player must move due to a previous push or pull
+    if (this.pushPullPossiblePiecesCurentPlayerHasToMove.length > 0) {
+      // Ensure the piece being moved is one of the required pieces
+      if (
+        !this.pushPullPossiblePiecesCurentPlayerHasToMove.some(
+          (pos) => pos[0] === fx && pos[1] === fy
+        )
+      ) {
+        return false;
+      } else {
+        // If the clean the list of pieces that must be moved
+        this.pushPullPossiblePiecesCurentPlayerHasToMove = [];
+      }
+    }
 
     // Check if positions are within board limits
     if (
@@ -228,8 +171,10 @@ export class Arimaa {
       return false;
 
     const piece = this.getPiece(from);
+    const targetSquare = this.getPiece(to);
 
-    if (!piece || piece[0] !== this.turn) return false; // Not your turn or empty square
+    // Empty square or target square is not empty
+    if (!piece || targetSquare) return false;
 
     const dx = Math.abs(fx - tx);
     const dy = Math.abs(fy - ty);
@@ -239,75 +184,31 @@ export class Arimaa {
 
     // Rabbits cannot move backward
     if (
-      piece[1] === RABBIT &&
+      this.getPieceType(piece) === RABBIT &&
       ((this.turn === GOLD && tx < fx) || (this.turn === SILVER && tx > fx))
     ) {
       return false;
     }
 
-    // Handle pushing or pulling
-    const targetPiece = this.getPiece(to);
-
-    if (targetPiece) {
-      if (targetPiece[0] === this.turn) return false; // Can't push/pull friendly pieces
-      // Validate push/pull logic
-      const strength = this.getPieceStrength(piece[1] as Piece);
-      const targetStrength = this.getPieceStrength(targetPiece[1] as Piece);
-      if (strength <= targetStrength) return false; // Can only move weaker pieces
-      // Check for valid push/pull positions
-      const pushPullValid = this.validatePushPull(from, to, targetPiece);
-      if (!pushPullValid) return false;
+    // Check if the piece belongs to the current player
+    if (this.getSide(piece) === this.turn) {
+      return true;
+    } else {
+      // Check if it's a valid push move
+      return this.checkIfIsPush(from, to);
     }
-    // Target square must be empty unless pushing/pulling
-    if (!targetPiece && this.board[tx][ty]) return false;
+  }
+
+  private checkIfIsPush(from: Position, to: Position): boolean {
+    // 2. has avaliable steps?
+    if (this.steps.length > 2) return false;
+    // 1. enemy piece has stroger current's players pieces neighbors (get neighbors and store them if satisfies the conditions)
+    const strongerNeighbors = this.getStrongerNeighbors(from);
+    // guardarlos para luego solo poder ejecutar los movimientos en el siguiente step con estos neighbors
+
+    if (strongerNeighbors.length === 0) return false;
+    this.pushPullPossiblePiecesCurentPlayerHasToMove = strongerNeighbors;
     return true;
-  }
-
-  private checkIfPositionIsInBoard(position: Position): boolean {
-    const [x, y] = position;
-    return x >= 0 && x < 8 && y >= 0 && y < 8;
-  }
-
-  /**
-   * Validates whether a push or pull move is possible from the given position.
-   *
-   * A push move requires the target piece to have an empty space to move into.
-   * A pull move requires the original position to have an empty space in the opposite direction.
-   *
-   * @param from - The starting position of the piece.
-   * @param to - The ending position of the piece.
-   * @param targetPiece - The piece being pushed or pulled, including its side.
-   * @returns `true` if the push or pull move is valid, otherwise `false`.
-   */
-  private validatePushPull(
-    from: Position,
-    to: Position,
-    _targetPiece: PieceWithSide
-  ): boolean {
-    // TODO: verify if _targetPiece is needed
-
-    const [fx, fy] = from;
-    const [tx, ty] = to;
-    // Determine the direction of the move
-    const dx = tx - fx; // +1 for right, -1 for left
-    const dy = ty - fy; // +1 for down, -1 for up
-    // Validate push (target must have an empty space to move into)
-    const pushTarget: Position = [tx + dx, ty + dy];
-    if (
-      this.checkIfPositionIsInBoard(pushTarget) &&
-      !this.board[pushTarget[0]][pushTarget[1]]
-    ) {
-      return true;
-    }
-    // Validate pull (from must have an empty space in the opposite direction)
-    const pullTarget: Position = [fx - dx, fy - dy];
-    if (
-      this.checkIfPositionIsInBoard(pullTarget) &&
-      !this.board[pullTarget[0]][pullTarget[1]]
-    ) {
-      return true;
-    }
-    return false;
   }
 
   /**
@@ -343,20 +244,53 @@ export class Arimaa {
    * @returns {boolean} - Returns true if there is at least one neighboring piece of the same side, otherwise false.
    */
   private hasFriendlyNeighbor([x, y]: Position, side: Side): boolean {
-    const neighbors: Position[] = [
+    const neighbors = this.getNeighbors([x, y]);
+    return neighbors.some(
+      (neighborPos) =>
+        this.checkIfPositionIsInBoard(neighborPos) &&
+        this.getSide(this.getPiece(neighborPos)) === side
+    );
+  }
+
+  /**
+   * Retrieves the positions of neighboring current player's pieces that are stronger than the enemy piece at the given position.
+   * This is used to determine if a push move can be made on the enemy piece.
+   * If no stronger neighbors are found, returns an empty array.
+   */
+  private getStrongerNeighbors(position: Position): Position[] {
+    const enemyPiece = this.getPiece(position);
+    if (!enemyPiece) return [];
+
+    const neighbors = this.getNeighbors(position);
+    const strongerNeighbors: Position[] = [];
+
+    for (const neighbor of neighbors) {
+      if (!this.checkIfPositionIsInBoard(neighbor)) break;
+      const neighborPiece = this.getPiece(neighbor);
+
+      if (
+        neighborPiece &&
+        this.getSide(neighborPiece) === this.turn &&
+        this.getPieceStrength(this.getPieceType(enemyPiece) as Piece) <
+          this.getPieceStrength(this.getPieceType(neighborPiece) as Piece)
+      ) {
+        strongerNeighbors.push(neighbor);
+      }
+    }
+
+    return strongerNeighbors;
+  }
+
+  /**
+   * Returns the neighboring positions of a given position on the board.
+   */
+  private getNeighbors([x, y]: Position): Position[] {
+    return [
       [x - 1, y],
       [x + 1, y],
       [x, y - 1],
       [x, y + 1],
     ];
-    return neighbors.some(
-      ([nx, ny]) =>
-        nx >= 0 &&
-        nx < 8 &&
-        ny >= 0 &&
-        ny < 8 &&
-        this.board[nx][ny]?.[0] === side
-    );
   }
 
   /**
@@ -395,6 +329,12 @@ export class Arimaa {
   public giveUpTurn(): void {
     if (this.steps.length === 0) {
       throw new Error("Cannot pass the entire turn without moving.");
+    }
+
+    if (this.pushPullPossiblePiecesCurentPlayerHasToMove.length > 0) {
+      throw new Error(
+        "Cannot pass the entire turn without moving the required pieces because a push / pull move has made."
+      );
     }
 
     // Check victory conditions before switching turns
@@ -446,29 +386,25 @@ export class Arimaa {
    */
   public generateLegalMoves(): [Position, Position][] {
     const moves: [Position, Position][] = [];
+
     for (let x = 0; x < 8; x++) {
       for (let y = 0; y < 8; y++) {
         const piece = this.getPiece([x, y]);
-        if (piece && piece[0] === this.turn) {
-          const neighbors: Position[] = [
-            [x - 1, y],
-            [x + 1, y],
-            [x, y - 1],
-            [x, y + 1],
-          ];
-          neighbors.forEach(([nx, ny]) => {
-            if (nx >= 0 && nx < 8 && ny >= 0 && ny < 8) {
-              if (this.validateMove([x, y], [nx, ny])) {
-                moves.push([
-                  [x, y],
-                  [nx, ny],
-                ]);
-              }
-            }
-          });
-        }
+        if (!piece) continue;
+        // this validation is no needed `this.getSide(piece) !== this.turn` i think :'(
+        const neighbors = this.getNeighbors([x, y]);
+        neighbors.forEach(([nx, ny]) => {
+          if (!this.checkIfPositionIsInBoard([nx, ny])) return;
+          if (!this.validateMove([x, y], [nx, ny])) return;
+
+          moves.push([
+            [x, y],
+            [nx, ny],
+          ]);
+        });
       }
     }
+
     return moves;
   }
 
@@ -479,8 +415,42 @@ export class Arimaa {
    */
   public applyMoves(moves: Position[][]): void {
     for (const [from, to] of moves) {
-      this.makeMove(from, to);
+      this.makeMove(from, to); // TODO: should we use movePiece instead trusting that are moves to apply are legal?
     }
+  }
+
+  private checkIfPositionIsInBoard(position: Position): boolean {
+    const [x, y] = position;
+    return x >= 0 && x < 8 && y >= 0 && y < 8;
+  }
+
+  /**
+   * Places a piece on the board at the specified position.
+   */
+  public putPiece(position: Position, piece: PieceWithSide): void {
+    this.board[position[0]][position[1]] = piece;
+  }
+
+  /**
+   * Retrieves the piece located at the specified position on the board.
+   */
+  public getPiece(position: Position): PieceWithSide {
+    return this.board[position[0]][position[1]];
+  }
+
+  /**
+   * Removes a piece from the specified position on the board.
+   */
+  public removePiece(position: Position): void {
+    this.putPiece(position, null);
+  }
+
+  public getSide(piece: PieceWithSide): Side | null {
+    return piece ? (piece[0] as Side) : null;
+  }
+
+  public getPieceType(piece: PieceWithSide): Piece | null {
+    return piece ? (piece[1] as Piece) : null;
   }
 
   /**

@@ -1,8 +1,6 @@
 import { useState, useCallback } from "react";
 import { generateRandomArimaaSetup } from "../utils/arimaa-utils";
-import { Arimaa, Position } from "../utils/arimaa-rules";
-
-let counter = 0;
+import { Arimaa, PieceWithSide, Position } from "../utils/arimaa-rules";
 
 /**
  * Custom hook to manage an Arimaa game.
@@ -21,14 +19,28 @@ export function useArimaaGame() {
     (from: Position, to: Position): boolean => {
       const copyGame = game.clone();
 
-      
-
       const result = copyGame.makeMove(from, to);
       if (!result) return false;
-      counter++;
-      console.log("move made", counter, game.getTurn());
-      console.log(copyGame.reversedAscii());
+
+      const stepCount =
+        game.getCurrentTurnStepsCount() === 3 &&
+        copyGame.getCurrentTurnStepsCount() === 0
+          ? 4
+          : copyGame.getCurrentTurnStepsCount();
+
+      console.log(
+        `move made (step) turn: #${copyGame.getTurnCount()}  step: #${stepCount} by ${game.getTurn()} piece ${copyGame.getPiece(
+          to
+        )}`
+      );
+      console.log(copyGame.ascii());
       console.log(JSON.stringify(copyGame.getBoard()));
+
+      if (copyGame.isGameOver()) {
+        alert(
+          `Game Over - Winner: ${copyGame.getWinner()} in ${copyGame.getTurn()} turns`
+        );
+      }
 
       setGame(copyGame);
       return true;
@@ -40,11 +52,20 @@ export function useArimaaGame() {
     game.giveUpTurn();
   }, [game]);
 
+  const loadBoard = useCallback(
+    (board: PieceWithSide[][]) => {
+      const newGame = new Arimaa().loadBoard(board);
+      setGame(newGame);
+    },
+    [setGame]
+  );
+
   return {
     board: game.getBoard(),
     game,
     handleMakeMove,
     turn: game.getTurn(),
     handleGiveUpTurn,
+    loadBoard,
   };
 }

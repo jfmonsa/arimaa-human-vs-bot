@@ -20,7 +20,6 @@ export function minimax(
     return { score: evaluateBoard(game, "g"), moves: [] };
   }
   const legalMoves = game.generateLegalMoves();
-  console.log("Legal Moves:", legalMoves);
 
   if (maximizingPlayer) {
     let maxEval = -Infinity;

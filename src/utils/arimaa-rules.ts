@@ -47,7 +47,10 @@ export class Arimaa {
   /** Board stores the current state of the game */
   private board: PieceWithSide[][] = genEmptyBoard();
   private turn: Side = GOLD;
-  private moveCount: number = 0;
+  /**
+   * The number of turns that have been taken in the game.
+   */
+  private turnCount: number = 1;
   /**
    * Stores the steps taken during the current turn.
    *
@@ -147,7 +150,34 @@ export class Arimaa {
     const [fx, fy] = from;
     const [tx, ty] = to;
 
+    // Check if positions are within board limits
+    if (
+      !this.checkIfPositionIsInBoard(from) ||
+      !this.checkIfPositionIsInBoard(to)
+    )
+      return false;
+
+    const piece = this.getPiece(from);
+    const targetSquare = this.getPiece(to);
+
+    // Empty square or target square is not empty
+    if (!piece || targetSquare) return false;
+
     if (this.isGameOver()) return false;
+
+    const dx = Math.abs(fx - tx);
+    const dy = Math.abs(fy - ty);
+
+    // Only orthogonal moves allowed and must be one square away
+    if (dx + dy !== 1) return false;
+
+    // Rabbits cannot move backward
+    if (
+      this.getPieceType(piece) === RABBIT &&
+      ((this.turn === GOLD && tx < fx) || (this.turn === SILVER && tx > fx))
+    ) {
+      return false;
+    }
 
     // Check if previous move was a push or pull
     // Check if there are pieces that the current player must move due to a previous push or pull
@@ -165,33 +195,6 @@ export class Arimaa {
       }
     }
 
-    // Check if positions are within board limits
-    if (
-      !this.checkIfPositionIsInBoard(from) ||
-      !this.checkIfPositionIsInBoard(to)
-    )
-      return false;
-
-    const piece = this.getPiece(from);
-    const targetSquare = this.getPiece(to);
-
-    // Empty square or target square is not empty
-    if (!piece || targetSquare) return false;
-
-    const dx = Math.abs(fx - tx);
-    const dy = Math.abs(fy - ty);
-
-    // Only orthogonal moves allowed and must be one square away
-    if (dx + dy !== 1) return false;
-
-    // Rabbits cannot move backward
-    if (
-      this.getPieceType(piece) === RABBIT &&
-      ((this.turn === GOLD && tx < fx) || (this.turn === SILVER && tx > fx))
-    ) {
-      return false;
-    }
-
     // Check if the piece belongs to the current player
     if (this.getSide(piece) === this.turn) {
       return true;
@@ -201,14 +204,16 @@ export class Arimaa {
     }
   }
 
-  private checkIfIsPush(from: Position, to: Position): boolean {
-    // 2. has avaliable steps?
-    if (this.steps.length > 2) return false;
-    // 1. enemy piece has stroger current's players pieces neighbors (get neighbors and store them if satisfies the conditions)
+  private checkIfIsPush(from: Position, _to: Position): boolean {
+    // TODO: check if is necessary `_to` parameter
+    // 2. current player has avaliable steps in the current turn?
+    if (4 - this.steps.length < 2) return false;
+    // 1. enemy piece has stroger current's players pieces neighbors
     const strongerNeighbors = this.getStrongerNeighbors(from);
-    // guardarlos para luego solo poder ejecutar los movimientos en el siguiente step con estos neighbors
 
     if (strongerNeighbors.length === 0) return false;
+
+    // store the pieces that the current player must move in the next step
     this.pushPullPossiblePiecesCurentPlayerHasToMove = strongerNeighbors;
     return true;
   }
@@ -327,6 +332,17 @@ export class Arimaa {
   }
 
   /**
+   * Determines the winner of the game.
+   *
+   * @returns {Side | null} The winning side (GOLD or SILVER) if the game is over, otherwise null.
+   */
+  public getWinner(): Side | null {
+    if (!this.isGameOver()) return null;
+
+    return this.turn === GOLD ? SILVER : GOLD;
+  }
+
+  /**
    * Ends the current player's turn and switches to the other player.
    */
   public giveUpTurn(): void {
@@ -340,16 +356,16 @@ export class Arimaa {
       );
     }
 
-    // Check victory conditions before switching turns
-    if (this.isGameOver()) {
-      console.log(`${this.turn === GOLD ? SILVER : GOLD} wins the game!`);
-      return;
-    }
+    // // Check victory conditions before switching turns
+    // if (this.isGameOver()) {
+    //   console.log(`${this.turn === GOLD ? SILVER : GOLD} wins the game!`);
+    //   return;
+    // }
 
     // Switch turn
     this.switchTurn();
     this.steps = []; // Reset steps
-    this.moveCount++;
+    this.turnCount++;
   }
 
   public switchTurn(): void {
@@ -377,7 +393,7 @@ export class Arimaa {
     const clone = new Arimaa();
     clone.board = this.board.map((row) => [...row]);
     clone.turn = this.turn;
-    clone.moveCount = this.moveCount;
+    clone.turnCount = this.turnCount;
     clone.steps = this.steps.map((step) => [...step]);
     return clone;
   }
@@ -410,7 +426,6 @@ export class Arimaa {
           const neighbors = gameCopy.getNeighbors([x, y]);
           neighbors.forEach(([nx, ny]) => {
             if (!gameCopy.checkIfPositionIsInBoard([nx, ny])) return;
-            //if (!gameCopy.validateMove([x, y], [nx, ny])) return;
 
             const move: [Position, Position] = [
               [x, y],
@@ -422,7 +437,6 @@ export class Arimaa {
             const newGameCopy = gameCopy.clone();
             const result = newGameCopy.makeMove([x, y], [nx, ny]); // Apply the move using makeMove
             if (result) {
-              newGameCopy.handleTraps(); // Handle traps after the move
               generateMoves(currentMoves, depth + 1, newGameCopy);
             }
             currentMoves.pop();
@@ -490,16 +504,10 @@ export class Arimaa {
   /**
    * print board for debugging purpouses
    */
-  public ascii(): string {
-    return this.board
-      .map((row) => row.map((cell) => cell || ".").join(" "))
-      .join("\n");
-  }
-
-  public reversedAscii(): string {
-    return this.board
-      .slice()
-      .reverse()
+  public ascii(side: Side = GOLD): string {
+    const boardToRender =
+      side === GOLD ? this.board.slice().reverse() : this.board;
+    return boardToRender
       .map((row) => row.map((cell) => cell || ".").join(" "))
       .join("\n");
   }
@@ -510,5 +518,13 @@ export class Arimaa {
 
   public getTurn(): Side {
     return this.turn;
+  }
+
+  public getCurrentTurnStepsCount(): number {
+    return this.steps.length;
+  }
+
+  public getTurnCount(): number {
+    return this.turnCount;
   }
 }

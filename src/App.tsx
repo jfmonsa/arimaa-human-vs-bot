@@ -57,15 +57,37 @@ export default function App() {
     return () => clearTimeout(timeoutId);
   }, [turn, game, movesToExecute.length, processNextMove]);
 
-  //const [gameToDebug, setGameToDebug] = useState<Arimaa>(new Arimaa().loadBoard());
+  /*const {
+    loadBoard,
+    board: boardToDebug,
+    handleMakeMove: makeMoveDebug,
+  } = useArimaaGame();
 
+  useEffect(() => {
+    loadBoard([
+      ["gM", "gC", "gR", "gE", "gR", "gR", "gH", "gC"],
+      ["gD", null, "gR", null, null, "gH", "gD", "gR"],
+      ["sR", "gR", null, null, null, null, null, null],
+      [null, null, null, "gR", "gR", null, null, null],
+      [null, null, null, null, null, null, null, null],
+      [null, null, null, null, null, null, null, null],
+      [null, "sR", "sD", "sC", "sH", "sM", "sR", "sR"],
+      ["sE", "sR", "sD", "sC", "sR", "sH", "sR", "sR"],
+    ]);
+  }, [loadBoard]);
+*/
+  /*  useEffect(() => {
+    console.log(gameToDebug.ascii());
+    getBestMove(gameToDebug, 1);
+  }, [gameToDebug]);
+*/
   return (
     <>
       <h1> Arimmaa Game: Human vs Computer</h1>
       <p>Turn: {turn}</p>
       <Button onClick={handleGiveUpTurn}>Finish My Turn</Button>
       <Board board={board} makeMove={handleMakeMove} />
-      {/* <Board board={board} makeMove={handleMakeMove} /> */}
+      {/* <Board board={boardToDebug} makeMove={makeMoveDebug} /> */}
     </>
   );
 }

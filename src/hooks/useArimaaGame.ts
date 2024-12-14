@@ -1,42 +1,48 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { generateRandomArimaaSetup } from "../utils/arimaa-utils";
-import { Arimaa } from "../utils/arimaa-rules";
+import { Arimaa, Position } from "../utils/arimaa-rules";
 
 /**
  * Custom hook to manage an Arimaa game.
  */
 export function useArimaaGame() {
-  const [game, setGame] = useState<Arimaa | null>(null);
-
-  // Generate a random Arimaa setup for gold and silver.
-  useEffect(() => {
+  /** stores Arimaa game instance */
+  const [game, setGame] = useState<Arimaa>(() => {
+    // Generate a random Arimaa setup for gold and silver.
     const goldSetup = generateRandomArimaaSetup();
-    console.log("goldSetup", goldSetup);
     const silverSetup = generateRandomArimaaSetup();
-    console.log("silverSetup", silverSetup);
     const newGame = new Arimaa(goldSetup, silverSetup);
-    setGame(newGame);
-  }, []);
+    return newGame;
+  });
 
   const handleMakeMove = useCallback(
-    (from: [number, number], to: [number, number]): boolean => {
-      if (game) {
-        return game.makeMove(from, to);
-      }
-      return false;
+    (from: Position, to: Position): boolean => {
+      const copyGame = game.clone();
+
+      const result = copyGame.makeMove(from, to);
+      if (!result) return false;
+
+      console.log("Move made", from, to);
+
+      console.log("before", game.ascii());
+      console.log("before", game.getBoard());
+      setGame(copyGame);
+      console.log("after", copyGame.ascii());
+      console.log("after", copyGame.getBoard());
+      return true;
     },
     [game]
   );
 
   const handleGiveUpTurn = useCallback(() => {
-    game?.giveUpTurn();
+    game.giveUpTurn();
   }, [game]);
 
   return {
-    board: game?.getBoard(),
+    board: game.getBoard(),
     game,
     handleMakeMove,
-    turn: game?.getTurn(),
+    turn: game.getTurn(),
     handleGiveUpTurn,
   };
 }

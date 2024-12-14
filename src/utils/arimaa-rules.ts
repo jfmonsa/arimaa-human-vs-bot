@@ -380,30 +380,55 @@ export class Arimaa {
   }
 
   /**
-   * Generates all legal moves for the current player based on the current board state.
+   * Generates all possible legal turns for the board state up to a depth of 4 steps.
+   * Each turn is represented as an array of steps, where each step is a tuple containing
+   * the starting and ending positions of a piece.
    *
-   * @returns An array of tuples, where each tuple contains two `Position` arrays. `from` and `to`
+   * @returns {Array<[Position, Position][]>} An array of turns, where each turn is an array of steps.
    */
-  public generateLegalMoves(): [Position, Position][] {
-    const moves: [Position, Position][] = [];
+  public generateLegalMoves(): [Position, Position][][] {
+    const moves: [Position, Position][][] = [];
 
-    for (let x = 0; x < 8; x++) {
-      for (let y = 0; y < 8; y++) {
-        const piece = this.getPiece([x, y]);
-        if (!piece) continue;
-        // this validation is no needed `this.getSide(piece) !== this.turn` i think :'(
-        const neighbors = this.getNeighbors([x, y]);
-        neighbors.forEach(([nx, ny]) => {
-          if (!this.checkIfPositionIsInBoard([nx, ny])) return;
-          if (!this.validateMove([x, y], [nx, ny])) return;
-
-          moves.push([
-            [x, y],
-            [nx, ny],
-          ]);
-        });
+    const generateMoves = (
+      currentMoves: [Position, Position][],
+      depth: number,
+      gameCopy: Arimaa
+    ) => {
+      if (depth === 4) {
+        moves.push([...currentMoves]);
+        return;
       }
-    }
+
+      for (let x = 0; x < 8; x++) {
+        for (let y = 0; y < 8; y++) {
+          const piece = gameCopy.getPiece([x, y]);
+          if (!piece || gameCopy.getSide(piece) !== gameCopy.turn) continue;
+
+          const neighbors = gameCopy.getNeighbors([x, y]);
+          neighbors.forEach(([nx, ny]) => {
+            if (!gameCopy.checkIfPositionIsInBoard([nx, ny])) return;
+            if (!gameCopy.validateMove([x, y], [nx, ny])) return;
+
+            const move: [Position, Position] = [
+              [x, y],
+              [nx, ny],
+            ];
+            currentMoves.push(move);
+            gameCopy.movePiece([x, y], [nx, ny], piece); // Apply the move
+            generateMoves(currentMoves, depth + 1, gameCopy);
+            gameCopy.movePiece([nx, ny], [x, y], piece); // Undo the move
+            currentMoves.pop();
+          });
+        }
+      }
+
+      if (depth > 0) {
+        moves.push([...currentMoves]);
+      }
+    };
+
+    const gameCopy = this.clone(); // Create a copy of the game state
+    generateMoves([], 0, gameCopy);
 
     return moves;
   }
@@ -413,9 +438,10 @@ export class Arimaa {
    *
    * @param moves - An array of move pairs, where each pair consists of `from` and `to` positions.
    */
-  public applyMoves(moves: Position[][]): void {
-    for (const [from, to] of moves) {
-      this.makeMove(from, to); // TODO: should we use movePiece instead trusting that are moves to apply are legal?
+  public applyMoves(turnSteps: [Position, Position][]): void {
+    // TODO: should we use movePiece instead trusting that are moves to apply are legal? or makeMove
+    for (const [from, to] of turnSteps) {
+      this.movePiece(from, to, this.getPiece(from));
     }
   }
 

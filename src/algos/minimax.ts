@@ -16,23 +16,24 @@ export function minimax(
   beta: number = Infinity
 ): { score: number; moves: [Position, Position][] } {
   if (depth === 0 || game.isGameOver()) {
-    // TODO: pass side dinamically
+    // TODO: pass side dynamically
     return { score: evaluateBoard(game, "g"), moves: [] };
   }
   const legalMoves = game.generateLegalMoves();
+  console.log("Legal Moves:", legalMoves);
 
   if (maximizingPlayer) {
     let maxEval = -Infinity;
     let bestMoves: [Position, Position][] = [];
 
-    for (const move of legalMoves) {
+    for (const turn of legalMoves) {
       const clonedGame = game.clone(); // Clone the game state.
-      clonedGame.applyMoves([move]); // Apply the move.
+      clonedGame.applyMoves(turn); // Apply the turn.
       const { score } = minimax(clonedGame, depth - 1, false, alpha, beta);
 
       if (score > maxEval) {
         maxEval = score;
-        bestMoves = [move];
+        bestMoves = turn;
       }
 
       alpha = Math.max(alpha, maxEval);
@@ -46,14 +47,14 @@ export function minimax(
     let minEval = Infinity;
     let bestMoves: [Position, Position][] = [];
 
-    for (const move of legalMoves) {
+    for (const turn of legalMoves) {
       const clonedGame = game.clone(); // Clone the game state.
-      clonedGame.applyMoves([move]); // Apply the move.
+      clonedGame.applyMoves(turn); // Apply the turn.
       const { score } = minimax(clonedGame, depth - 1, true, alpha, beta);
 
       if (score < minEval) {
         minEval = score;
-        bestMoves = [move];
+        bestMoves = turn;
       }
 
       beta = Math.min(beta, minEval);
@@ -71,6 +72,7 @@ export function getBestMove(
   game: Arimaa,
   depth: number
 ): [Position, Position][] {
+  console.log("Getting best move...");
   const { moves } = minimax(game, depth, true);
   return moves;
 }

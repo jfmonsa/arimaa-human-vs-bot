@@ -355,13 +355,6 @@ export class Arimaa {
         "Cannot pass the entire turn without moving the required pieces because a push / pull move has made."
       );
     }
-
-    // // Check victory conditions before switching turns
-    // if (this.isGameOver()) {
-    //   console.log(`${this.turn === GOLD ? SILVER : GOLD} wins the game!`);
-    //   return;
-    // }
-
     // Switch turn
     this.switchTurn();
     this.steps = []; // Reset steps
@@ -395,6 +388,8 @@ export class Arimaa {
     clone.turn = this.turn;
     clone.turnCount = this.turnCount;
     clone.steps = this.steps.map((step) => [...step]);
+    clone.pushPullPossiblePiecesCurentPlayerHasToMove =
+      this.pushPullPossiblePiecesCurentPlayerHasToMove.map((pos) => [...pos]);
     return clone;
   }
 
@@ -421,12 +416,10 @@ export class Arimaa {
       for (let x = 0; x < 8; x++) {
         for (let y = 0; y < 8; y++) {
           const piece = gameCopy.getPiece([x, y]);
-          if (!piece || gameCopy.getSide(piece) !== gameCopy.turn) continue;
+          if (!piece) continue;
 
           const neighbors = gameCopy.getNeighbors([x, y]);
           neighbors.forEach(([nx, ny]) => {
-            if (!gameCopy.checkIfPositionIsInBoard([nx, ny])) return;
-
             const move: [Position, Position] = [
               [x, y],
               [nx, ny],
@@ -456,12 +449,11 @@ export class Arimaa {
   }
 
   /**
-   * Applies a series of moves to the current game state.
+   * Applies a series of moves to the current game state. Does not check if the moves are legal or not.
    *
    * @param moves - An array of move pairs, where each pair consists of `from` and `to` positions.
    */
   public applyMoves(turnSteps: [Position, Position][]): void {
-    // TODO: should we use movePiece instead trusting that are moves to apply are legal? or makeMove
     for (const [from, to] of turnSteps) {
       this.movePiece(from, to, this.getPiece(from));
     }
@@ -476,7 +468,8 @@ export class Arimaa {
    * Places a piece on the board at the specified position.
    */
   public putPiece(position: Position, piece: PieceWithSide): void {
-    this.board[position[0]][position[1]] = piece;
+    const [row, col] = position;
+    this.board[row][col] = piece;
   }
 
   /**

@@ -15,6 +15,10 @@ export function useArimaaGame() {
     return newGame;
   });
 
+  /**
+   * Make a move from one position to another.
+   * @returns Whether the move was successful.
+   */
   const handleMakeMove = useCallback(
     (from: Position, to: Position): boolean => {
       const copyGame = game.clone();
@@ -36,12 +40,6 @@ export function useArimaaGame() {
       console.log(copyGame.ascii());
       console.log(JSON.stringify(copyGame.getBoard()));
 
-      if (copyGame.isGameOver()) {
-        alert(
-          `Game Over - Winner: ${copyGame.getWinner()} in ${copyGame.getTurn()} turns`
-        );
-      }
-
       setGame(copyGame);
       return true;
     },
@@ -49,7 +47,13 @@ export function useArimaaGame() {
   );
 
   const handleGiveUpTurn = useCallback(() => {
-    game.giveUpTurn();
+    try {
+      game.giveUpTurn();
+      setGame(game.clone());
+    } catch (e) {
+      console.warn(e);
+      if (e instanceof Error) alert(e.message);
+    }
   }, [game]);
 
   const loadBoard = useCallback(

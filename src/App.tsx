@@ -15,6 +15,7 @@ export default function App() {
   );
   const turnRef = useRef(turn);
 
+  /** excecute pending moves made by bot  */
   const processNextMove = useCallback(() => {
     setMovesToExecute((currentMoves) => {
       if (currentMoves.length === 0) return [];
@@ -36,7 +37,7 @@ export default function App() {
       // Delay of 500ms for more natural moves
       timeoutId = setTimeout(() => {
         processNextMove();
-      }, 500);
+      }, 1000);
       return () => clearTimeout(timeoutId);
     }
 
@@ -48,6 +49,10 @@ export default function App() {
         setMovesToExecute(newMoves);
         turnRef.current = turn;
       }
+
+      newMoves.forEach(([from, to]) => {
+        console.log(`Computer move: ${from} -> ${to}`);
+      });
     }
 
     // Update turnRef.current to the current turn
@@ -57,22 +62,36 @@ export default function App() {
     return () => clearTimeout(timeoutId);
   }, [turn, game, movesToExecute.length, processNextMove]);
 
-  /*const {
+  // show alert when the game is over
+  useEffect(() => {
+    if (!game.isGameOver()) return;
+
+    const timeoutId = setTimeout(() => {
+      alert(
+        `Game Over - Winner: ${game.getWinner()} in ${game.getTurn()} turns`
+      );
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [game]);
+  /*
+  const {
     loadBoard,
     board: boardToDebug,
     handleMakeMove: makeMoveDebug,
+    game: gameToDebug,
   } = useArimaaGame();
 
   useEffect(() => {
     loadBoard([
-      ["gM", "gC", "gR", "gE", "gR", "gR", "gH", "gC"],
-      ["gD", null, "gR", null, null, "gH", "gD", "gR"],
-      ["sR", "gR", null, null, null, null, null, null],
-      [null, null, null, "gR", "gR", null, null, null],
-      [null, null, null, null, null, null, null, null],
-      [null, null, null, null, null, null, null, null],
-      [null, "sR", "sD", "sC", "sH", "sM", "sR", "sR"],
-      ["sE", "sR", "sD", "sC", "sR", "sH", "sR", "sR"],
+      ["gR", null, "gR", null, "gR", null, null, "gR"],
+      ["gD", "gD", "gR", null, null, null, null, "gR"],
+      [null, null, "gM", "gC", "gR", null, null, null],
+      [null, null, null, "gH", "gH", null, "gR", "gC"],
+      [null, null, null, null, "gE", null, null, null],
+      [null, null, null, null, null, null, "sR", null],
+      ["sH", null, null, null, null, null, null, "sC"],
+      ["sC", "sM", "sD", "sE", null, null, "sH", "sD"],
     ]);
   }, [loadBoard]);
 */
@@ -83,7 +102,7 @@ export default function App() {
 */
   return (
     <main>
-      <h1> Arimmaa Game: Human vs Computer</h1>
+      <h1> Arimaa Game: Human vs Computer</h1>
       <p>Turn: {turn}</p>
       <Board board={board} makeMove={handleMakeMove} />
       <Button onClick={handleGiveUpTurn}>Finish My Turn</Button>

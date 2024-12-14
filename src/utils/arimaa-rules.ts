@@ -45,7 +45,7 @@ export type SilverRank = 7 | 8;
 
 export class Arimaa {
   /** Board stores the current state of the game */
-  private board: PieceWithSide[][];
+  private board: PieceWithSide[][] = genEmptyBoard();
   private turn: Side = GOLD;
   private moveCount: number = 0;
   /**
@@ -68,20 +68,20 @@ export class Arimaa {
    */
   private pushPullPossiblePiecesCurentPlayerHasToMove: Position[] = [];
 
-  constructor(goldSetup: Piece[], silverSetup: Piece[]) {
-    this.board = this.initializeBoard(goldSetup, silverSetup);
+  // TODO: should we use a constructor to initialize and check the two forms of initialization of the board: loadBoard and initializeBoard?
+
+  public loadBoard(board: PieceWithSide[][]): Arimaa {
+    this.board = board;
+    return this;
   }
 
   /** place gold and silver pieces on the board for the initial setup */
-  private initializeBoard(
-    goldSetup: Piece[],
-    silverSetup: Piece[]
-  ): PieceWithSide[][] {
+  public setup(goldSetup: Piece[], silverSetup: Piece[]): Arimaa {
     const board = genEmptyBoard();
     this.placePieces(board, GOLD, goldSetup, 1, 2);
     this.placePieces(board, SILVER, silverSetup, 7, 8);
-
-    return board;
+    this.board = board;
+    return this;
   }
 
   /**
@@ -146,6 +146,8 @@ export class Arimaa {
   public validateMove(from: Position, to: Position): boolean {
     const [fx, fy] = from;
     const [tx, ty] = to;
+
+    if (this.isGameOver()) return false;
 
     // Check if previous move was a push or pull
     // Check if there are pieces that the current player must move due to a previous push or pull
@@ -286,12 +288,13 @@ export class Arimaa {
    */
   private getNeighbors([x, y]: Position): Position[] {
     return [
-      [x - 1, y],
-      [x + 1, y],
-      [x, y - 1],
-      [x, y + 1],
+      [x - 1, y], // up
+      [x + 1, y], // down
+      [x, y - 1], // Left
+      [x, y + 1], // Right
     ];
   }
+  // TODO: change notation to algebraic or i,j (matrix notation) because x,y is confusing since we aren't using a cartesian plane
 
   /**
    * Checks the victory conditions for the Arimaa game.
@@ -371,7 +374,7 @@ export class Arimaa {
    * @returns A new Arimaa instance with the board state after the move.
    */
   public clone(): Arimaa {
-    const clone = new Arimaa([], []);
+    const clone = new Arimaa();
     clone.board = this.board.map((row) => [...row]);
     clone.turn = this.turn;
     clone.moveCount = this.moveCount;
@@ -407,16 +410,21 @@ export class Arimaa {
           const neighbors = gameCopy.getNeighbors([x, y]);
           neighbors.forEach(([nx, ny]) => {
             if (!gameCopy.checkIfPositionIsInBoard([nx, ny])) return;
-            if (!gameCopy.validateMove([x, y], [nx, ny])) return;
+            //if (!gameCopy.validateMove([x, y], [nx, ny])) return;
 
             const move: [Position, Position] = [
               [x, y],
               [nx, ny],
             ];
             currentMoves.push(move);
-            gameCopy.movePiece([x, y], [nx, ny], piece); // Apply the move
-            generateMoves(currentMoves, depth + 1, gameCopy);
-            gameCopy.movePiece([nx, ny], [x, y], piece); // Undo the move
+
+            // Create a new copy of the game state
+            const newGameCopy = gameCopy.clone();
+            const result = newGameCopy.makeMove([x, y], [nx, ny]); // Apply the move using makeMove
+            if (result) {
+              newGameCopy.handleTraps(); // Handle traps after the move
+              generateMoves(currentMoves, depth + 1, newGameCopy);
+            }
             currentMoves.pop();
           });
         }
@@ -484,6 +492,14 @@ export class Arimaa {
    */
   public ascii(): string {
     return this.board
+      .map((row) => row.map((cell) => cell || ".").join(" "))
+      .join("\n");
+  }
+
+  public reversedAscii(): string {
+    return this.board
+      .slice()
+      .reverse()
       .map((row) => row.map((cell) => cell || ".").join(" "))
       .join("\n");
   }

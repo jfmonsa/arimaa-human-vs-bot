@@ -4,7 +4,7 @@ import { Board } from "./components/board/Board";
 import { Button } from "./components/button/Button";
 import { useArimaaGame } from "./hooks/useArimaaGame";
 import { getBestMove } from "./algos/minimax";
-import { Arimaa, Position, SILVER } from "./utils/arimaa-rules";
+import { Position, SILVER } from "./utils/arimaa-rules";
 
 export default function App() {
   const { board, handleMakeMove, handleGiveUpTurn, turn, game } =
@@ -82,12 +82,12 @@ export default function App() {
   }, [gameToDebug]);
 */
   return (
-    <>
+    <main>
       <h1> Arimmaa Game: Human vs Computer</h1>
       <p>Turn: {turn}</p>
-      <Button onClick={handleGiveUpTurn}>Finish My Turn</Button>
       <Board board={board} makeMove={handleMakeMove} />
+      <Button onClick={handleGiveUpTurn}>Finish My Turn</Button>
       {/* <Board board={boardToDebug} makeMove={makeMoveDebug} /> */}
-    </>
+    </main>
   );
 }

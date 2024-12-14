@@ -1,9 +1,9 @@
 button {
+  margin-top: 20px;
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  height: 48px;
-  width: 200px;
+  padding: 8px 16px;
   border-radius: 8px;
   border: 2px solid rgb(0, 0, 0);
   font-size: 16px;

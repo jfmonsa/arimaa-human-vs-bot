@@ -10,7 +10,6 @@ export default function App() {
   const { board, handleMakeMove, handleGiveUpTurn, turn, game } =
     useArimaaGame();
 
-  /*
   const [movesToExecute, setMovesToExecute] = useState<[Position, Position][]>(
     []
   );
@@ -28,12 +27,17 @@ export default function App() {
     });
   }, [handleMakeMove]);
 
-  // Bot's turn
+  // Handles Bot's turn (SILVER) player
   useEffect(() => {
-    // if there are moves to execute, them execute next move
+    // if there are moves to execute, then execute next move
+    let timeoutId: number;
+
     if (movesToExecute.length > 0) {
-      processNextMove();
-      return;
+      // Delay of 500ms for more natural moves
+      timeoutId = setTimeout(() => {
+        processNextMove();
+      }, 500);
+      return () => clearTimeout(timeoutId);
     }
 
     // Only generate moves if it's the computer's turn and the turn has changed
@@ -45,7 +49,13 @@ export default function App() {
         turnRef.current = turn;
       }
     }
-  }, [turn, game, movesToExecute.length, processNextMove]);*/
+
+    // Update turnRef.current to the current turn
+    turnRef.current = turn;
+
+    // timeout cleanup
+    return () => clearTimeout(timeoutId);
+  }, [turn, game, movesToExecute.length, processNextMove]);
 
   return (
     <>

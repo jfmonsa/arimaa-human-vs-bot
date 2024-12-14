@@ -58,10 +58,6 @@ export function Board({
       }
     }
 
-    console.log("Square clicked", row, col);
-    console.log("Selected square", squareSelected);
-    console.log("Piece", piece);
-
     const isChangingSelectedPiece =
       piece &&
       squareSelected &&
@@ -95,9 +91,10 @@ export function Board({
     rowIndex: number,
     colIndex: number
   ) => {
-    // Ajustar los índices de fila y columna cuando el tablero está girado
+    // Flip board if player is GOLD
+    // Only invert row index, column index is equal when the board is flipped
     const actualRowIndex = side === SILVER ? rowIndex : 7 - rowIndex;
-    const actualColIndex = side === SILVER ? colIndex : colIndex; // Columna no necesita inversión
+    const actualColIndex = side === SILVER ? colIndex : colIndex;
 
     return (
       <div
@@ -111,7 +108,7 @@ export function Board({
             ? Styles.selected
             : ""
         }`}
-        onClick={() => handleSquareClick(actualRowIndex, colIndex)} // Enviar índices correctos
+        onClick={() => handleSquareClick(actualRowIndex, colIndex)}
       >
         {cell && (
           <div
@@ -131,6 +128,7 @@ export function Board({
   };
 
   const renderBoard = () => {
+    // Flip board if player is GOLD
     const rows = side === SILVER ? board : [...board].reverse();
     return rows.map((row, rowIndex) => (
       <div key={rowIndex} className={Styles["board-row"]}>

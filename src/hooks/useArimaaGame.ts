@@ -22,13 +22,7 @@ export function useArimaaGame() {
       const result = copyGame.makeMove(from, to);
       if (!result) return false;
 
-      console.log("Move made", from, to);
-
-      console.log("before", game.ascii());
-      console.log("before", game.getBoard());
       setGame(copyGame);
-      console.log("after", copyGame.ascii());
-      console.log("after", copyGame.getBoard());
       return true;
     },
     [game]

@@ -134,6 +134,8 @@ export class Arimaa {
     to: Position,
     extraOptions?: MakeMoveExtraOptions
   ): boolean {
+    console.log("makeMove", JSON.stringify([from, to]));
+    console.log("steps", JSON.stringify(this.steps));
     if (!this.validateMove(from, to)) return false;
 
     this.movePiece(from, to, this.getPiece(from));
@@ -224,7 +226,9 @@ export class Arimaa {
         // If the clean the list of pieces that must be moved
         this.pushPullPossiblePiecesCurentPlayerHasToMove = [];
         this.pushPullNextSquareCurrentPlayerHasToMove = null;
-        if (this.turn !== this.getSide(piece)) prevMoveWasAPull = true;
+        if (this.turn !== this.getSide(piece)) {
+          prevMoveWasAPull = true;
+        }
       }
     }
     // Check if the piece belongs to the current player
@@ -233,12 +237,14 @@ export class Arimaa {
       if (this.isPieceFrozen(from)) {
         return false;
       }
-
       this.checkIfIsPull(from, to); // don't return false because even if is not a pull move, is a valid move
     } else {
       // Check if it's a valid push move
       const pushValidation = this.checkIfIsPush(from, to);
-      if (!prevMoveWasAPull && !pushValidation) return false;
+      if (!prevMoveWasAPull && !pushValidation) {
+        console.log("Not a valid push move", !prevMoveWasAPull, pushValidation);
+        return false;
+      }
     }
 
     // Check: A player may no make a move equivalent to passsing the whole turn without moving
@@ -266,7 +272,22 @@ export class Arimaa {
     this.pushPullPossiblePiecesCurentPlayerHasToMove = strongerNeighbors;
     // store the next square that the current player has to move to
     this.pushPullNextSquareCurrentPlayerHasToMove = from;
-    //console.log("Is a push move" + this.getPiece(from), "move:", [from, to]);
+    console.log("Is a push move" + this.getPiece(from), "move:", [from, to]);
+
+    // Check if in the next move the player will make a move that is equivalent to pass the whole turn
+    const isNextMoveEquivalentToPassTheWholeTurn =
+      this.steps.length !== 0 &&
+      isSamePosition(
+        this.pushPullNextSquareCurrentPlayerHasToMove,
+        this.steps[0][0]
+      );
+
+    if (isNextMoveEquivalentToPassTheWholeTurn) {
+      console.log(
+        "Is a push move that is equivalent to pass the whole turn (previous move was a pull from the same square)"
+      );
+      return false;
+    }
     return true;
   }
 
@@ -274,15 +295,30 @@ export class Arimaa {
     // 2. current player has avaliable steps in the current turn?
     if (4 - this.steps.length < 2) return false;
     // 1. enemy piece has stroger current's players pieces neighbors
-    const strongerNeighbors = this.getWeakerNeighbouringEnemies(to);
+    const weakerAdjacentEnemies = this.getWeakerNeighbouringEnemies(from);
 
-    if (strongerNeighbors.length === 0) return false;
+    if (weakerAdjacentEnemies.length === 0) return false;
 
     // store the pieces that the current player must move in the next step
-    this.pushPullPossiblePiecesCurentPlayerHasToMove = strongerNeighbors;
+    this.pushPullPossiblePiecesCurentPlayerHasToMove = weakerAdjacentEnemies;
     // store the next square that the current player has to move to
-    this.pushPullNextSquareCurrentPlayerHasToMove = to;
+    this.pushPullNextSquareCurrentPlayerHasToMove = from;
     console.log("Is a pull move" + this.getPiece(from), "move:", [from, to]);
+
+    // Check if in the next move the player will make a move that is equivalent to pass the whole turn
+    const isNextMoveEquivalentToPassTheWholeTurn =
+      this.steps.length !== 0 &&
+      isSamePosition(
+        this.pushPullNextSquareCurrentPlayerHasToMove,
+        this.steps[0][0]
+      );
+
+    if (isNextMoveEquivalentToPassTheWholeTurn) {
+      console.log(
+        "Is a pull move that is equivalent to pass the whole turn (previous move was a push from the same square)"
+      );
+      return false;
+    }
     return true;
   }
 

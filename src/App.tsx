@@ -87,11 +87,21 @@ export default function App() {
     board: boardToDebug,
     handleMakeMove: makeMoveDebug,
     game: gameToDebug,
+    loadBoard: loadBoardToDebug,
   } = useArimaaGame();
 
   useEffect(() => {
-    // loadBoard(mo);
-  }, [loadBoard]);
+    loadBoardToDebug([
+      ["gR", "gR", null, "gR", "gR", "gR", null, null],
+      [null, null, null, null, null, null, null, "gR"],
+      [null, "gH", "gC", "gR", "gH", null, null, "gR"],
+      ["gE", null, null, "gC", null, "gD", null, null],
+      ["sC", null, null, null, null, null, null, null],
+      [null, null, null, null, null, null, "gD", "sR"],
+      [null, null, "gM", null, null, null, null, "sR"],
+      ["sE", null, "sD", "sM", "sR", null, "sC", "sH"],
+    ]);
+  }, [loadBoardToDebug]);
 
   /*  useEffect(() => {
     console.log(gameToDebug.ascii());
@@ -104,7 +114,7 @@ export default function App() {
       <p>Turn: {turn}</p>
       <Board board={board} makeMove={handleMakeMove} />
       <Button onClick={handleGiveUpTurn}>Finish My Turn</Button>
-      {/* <Board board={boardToDebug} makeMove={makeMoveDebug} /> */}
+      <Board board={boardToDebug} makeMove={makeMoveDebug} />
     </main>
   );
 }

@@ -20,10 +20,14 @@ export function useArimaaGame() {
    * @returns Whether the move was successful.
    */
   const handleMakeMove = useCallback(
-    (from: Position, to: Position): boolean => {
+    (
+      from: Position,
+      to: Position,
+      extraOptions?: { needToPassTurnAfterMoveDone: boolean }
+    ): boolean => {
       const copyGame = game.clone();
 
-      const result = copyGame.makeMove(from, to);
+      const result = copyGame.makeMove(from, to, extraOptions);
       if (!result) return false;
 
       const stepCount =
@@ -46,19 +50,15 @@ export function useArimaaGame() {
     [game]
   );
 
-  const handleGiveUpTurn = useCallback(
-    (wasBot = false) => {
-      try {
-        game.giveUpTurn(wasBot && game.getTurn() === "s");
-        setGame(game.clone());
-      } catch (e) {
-        if (wasBot && game.getTurn() === "s") return; // workaround for bot, fix this
-        console.warn(e);
-        if (e instanceof Error) alert(e.message);
-      }
-    },
-    [game]
-  );
+  const handleGiveUpTurn = useCallback(() => {
+    try {
+      game.giveUpTurn();
+      setGame(game.clone());
+    } catch (e) {
+      console.warn(e);
+      if (e instanceof Error) alert(e.message);
+    }
+  }, [game]);
 
   const loadBoard = useCallback(
     (board: PieceWithSide[][]) => {

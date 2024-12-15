@@ -4,7 +4,7 @@ import { Board } from "./components/board/Board";
 import { Button } from "./components/button/Button";
 import { useArimaaGame } from "./hooks/useArimaaGame";
 import { getBestMove } from "./algos/minimax";
-import { PieceWithSide, Position, SILVER } from "./utils/arimaa-rules";
+import { Position, SILVER } from "./utils/arimaa-rules";
 
 export default function App() {
   const { board, handleMakeMove, handleGiveUpTurn, turn, game } =
@@ -23,20 +23,16 @@ export default function App() {
 
       const [nextMove] = currentMoves;
       const [from, to] = nextMove;
-      handleMakeMove(from, to);
-
       // If the bot has not finished its turn after 4 moves, give up the turn
-      if (
-        countTurnStepsCalculatedByBot.current < 4 &&
-        currentMoves.length === 1
-      ) {
-        handleGiveUpTurn(true);
-        countTurnStepsCalculatedByBot.current = 0;
-      }
+      handleMakeMove(from, to, {
+        needToPassTurnAfterMoveDone:
+          countTurnStepsCalculatedByBot.current < 4 &&
+          currentMoves.length === 1,
+      });
 
       return currentMoves.slice(1);
     });
-  }, [handleMakeMove, handleGiveUpTurn]);
+  }, [handleMakeMove]);
 
   // Handles Bot's turn (SILVER) player
   useEffect(() => {

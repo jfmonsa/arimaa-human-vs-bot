@@ -37,6 +37,9 @@ export type GoldRank = 1 | 2;
 
 export type SilverRank = 7 | 8;
 
+export interface MakeMoveExtraOptions {
+  needToPassTurnAfterMoveDone?: boolean;
+}
 // export type Rank = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 // export type File = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h";
 // export type SquarePosition = `${File}${Rank}`;
@@ -126,7 +129,11 @@ export class Arimaa {
   }
 
   /** Excecute an step of the turn of a player */
-  public makeMove(from: Position, to: Position): boolean {
+  public makeMove(
+    from: Position,
+    to: Position,
+    extraOptions?: MakeMoveExtraOptions
+  ): boolean {
     if (!this.validateMove(from, to)) return false;
 
     this.movePiece(from, to, this.getPiece(from));
@@ -136,7 +143,10 @@ export class Arimaa {
     this.handleTraps();
 
     // Check if the turn should end
-    if (this.steps.length === 4) {
+    if (
+      this.steps.length === 4 ||
+      (extraOptions && extraOptions.needToPassTurnAfterMoveDone)
+    ) {
       this.giveUpTurn();
     }
 
@@ -190,6 +200,8 @@ export class Arimaa {
     ) {
       return false;
     }
+
+    let prevMoveWasAPull = false;
     // Check if previous move was a push or pull
     // Check if there are pieces that the current player must move due to a previous push or pull
     if (this.pushPullPossiblePiecesCurentPlayerHasToMove.length > 0) {
@@ -212,16 +224,21 @@ export class Arimaa {
         // If the clean the list of pieces that must be moved
         this.pushPullPossiblePiecesCurentPlayerHasToMove = [];
         this.pushPullNextSquareCurrentPlayerHasToMove = null;
+        if (this.turn !== this.getSide(piece)) prevMoveWasAPull = true;
       }
     }
-
     // Check if the piece belongs to the current player
     if (this.getSide(piece) === this.turn) {
-      console.log("ignore this block");
+      // Check if the piece is frozen
+      if (this.isPieceFrozen(from)) {
+        return false;
+      }
+
+      this.checkIfIsPull(from, to); // don't return false because even if is not a pull move, is a valid move
     } else {
       // Check if it's a valid push move
       const pushValidation = this.checkIfIsPush(from, to);
-      if (!pushValidation) return false;
+      if (!prevMoveWasAPull && !pushValidation) return false;
     }
 
     // Check: A player may no make a move equivalent to passsing the whole turn without moving
@@ -249,8 +266,58 @@ export class Arimaa {
     this.pushPullPossiblePiecesCurentPlayerHasToMove = strongerNeighbors;
     // store the next square that the current player has to move to
     this.pushPullNextSquareCurrentPlayerHasToMove = from;
-    console.log("Is a push move" + this.getPiece(from), "move:", [from, to]);
+    //console.log("Is a push move" + this.getPiece(from), "move:", [from, to]);
     return true;
+  }
+
+  private checkIfIsPull(from: Position, to: Position): boolean {
+    // 2. current player has avaliable steps in the current turn?
+    if (4 - this.steps.length < 2) return false;
+    // 1. enemy piece has stroger current's players pieces neighbors
+    const strongerNeighbors = this.getWeakerNeighbouringEnemies(to);
+
+    if (strongerNeighbors.length === 0) return false;
+
+    // store the pieces that the current player must move in the next step
+    this.pushPullPossiblePiecesCurentPlayerHasToMove = strongerNeighbors;
+    // store the next square that the current player has to move to
+    this.pushPullNextSquareCurrentPlayerHasToMove = to;
+    console.log("Is a pull move" + this.getPiece(from), "move:", [from, to]);
+    return true;
+  }
+
+  /**
+   * Checks if a piece is frozen.
+   * @param position - The position of the piece to check.
+   * @returns `true` if the piece is frozen, `false` otherwise.
+   */
+  private isPieceFrozen(position: Position): boolean {
+    const piece = this.getPiece(position);
+    if (!piece) return false;
+
+    const side = this.getSide(piece);
+    const neighbors = this.getNeighbors(position);
+
+    // Check if there is a friendly neighbor
+    const hasFriendlyNeighbor = neighbors.some(
+      (neighbor) =>
+        this.checkIfPositionIsInBoard(neighbor) &&
+        this.getSide(this.getPiece(neighbor)) === side
+    );
+
+    if (hasFriendlyNeighbor) return false;
+
+    // Check if there is a stronger enemy neighbor
+    const isFrozen = neighbors.some(
+      (neighbor) =>
+        this.checkIfPositionIsInBoard(neighbor) &&
+        this.getSide(this.getPiece(neighbor)) !== side &&
+        this.getPieceStrength(
+          this.getPieceType(this.getPiece(neighbor)) as Piece
+        ) > this.getPieceStrength(this.getPieceType(piece) as Piece)
+    );
+
+    return isFrozen;
   }
 
   /**
@@ -307,7 +374,7 @@ export class Arimaa {
     const strongerNeighbors: Position[] = [];
 
     for (const neighbor of neighbors) {
-      if (!this.checkIfPositionIsInBoard(neighbor)) break;
+      if (!this.checkIfPositionIsInBoard(neighbor)) continue;
       const neighborPiece = this.getPiece(neighbor);
 
       if (
@@ -321,6 +388,30 @@ export class Arimaa {
     }
 
     return strongerNeighbors;
+  }
+
+  private getWeakerNeighbouringEnemies(position: Position): Position[] {
+    const currentPiece = this.getPiece(position);
+    if (!currentPiece) return [];
+
+    const neighbors = this.getNeighbors(position);
+    const weakerNeighbors: Position[] = [];
+
+    for (const neighbor of neighbors) {
+      if (!this.checkIfPositionIsInBoard(neighbor)) continue;
+      const neighborPiece = this.getPiece(neighbor);
+
+      if (
+        neighborPiece &&
+        this.getSide(neighborPiece) !== this.turn &&
+        this.getPieceStrength(this.getPieceType(currentPiece) as Piece) >
+          this.getPieceStrength(this.getPieceType(neighborPiece) as Piece)
+      ) {
+        weakerNeighbors.push(neighbor);
+      }
+    }
+
+    return weakerNeighbors;
   }
 
   /**
@@ -380,29 +471,27 @@ export class Arimaa {
   /**
    * Ends the current player's turn and switches to the other player.
    */
-  public giveUpTurn(wasBot = false): void {
+  public giveUpTurn(): void {
     // TODO: wasBot is a workaround for the bot, fix this
 
-    if (this.steps.length === 0 && !wasBot) {
+    if (this.steps.length === 0) {
       throw new Error("Cannot pass the entire turn without moving.");
     }
 
-    if (
-      this.pushPullPossiblePiecesCurentPlayerHasToMove.length > 0 &&
-      !wasBot
-    ) {
+    if (this.pushPullPossiblePiecesCurentPlayerHasToMove.length > 0) {
       throw new Error(
         "Cannot pass the entire turn without moving the required pieces because a push / pull move has made."
       );
     }
 
     // if is in the 2nd step and is passing turn, check if is trying to pass the whole turn without moving
-    if (this.steps.length === 2 && !wasBot) {
-      console.log("turn to end", this.turn, this.steps.length);
-      if (this.isBoardEqualToCurrent(this.boardBeforeTurn))
-        throw new Error(
-          "Cannot pass the entire turn without moving. moves are equivalent to pass the whole turn."
-        );
+    if (
+      this.steps.length === 2 &&
+      this.isBoardEqualToCurrent(this.boardBeforeTurn)
+    ) {
+      throw new Error(
+        "Cannot pass the entire turn without moving. moves are equivalent to pass the whole turn."
+      );
     }
     // Switch turn
     this.switchTurn();
@@ -468,11 +557,7 @@ export class Arimaa {
       gameCopy: Arimaa
     ) => {
       if (depth === 4) {
-        try {
-          moves.push([...currentMoves]);
-        } catch {
-          // If an error occurs, don't add the turn to the list of turns
-        }
+        moves.push([...currentMoves]);
         return;
       }
 
@@ -501,7 +586,9 @@ export class Arimaa {
       }
 
       if (depth > 0) {
+        // For gen turns with less than 4 steps -> 1, 2, 3
         try {
+          gameCopy.giveUpTurn();
           moves.push([...currentMoves]);
         } catch {
           // If an error occurs, don't add the turn to the list of turns
@@ -511,7 +598,6 @@ export class Arimaa {
 
     const gameCopy = this.clone(); // Create a copy of the game state
     generateMoves([], 0, gameCopy);
-
     return moves;
   }
 

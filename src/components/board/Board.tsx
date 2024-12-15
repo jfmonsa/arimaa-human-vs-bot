@@ -54,7 +54,7 @@ export function Board({
       const selectedPiece = board[squareSelected[0]][squareSelected[1]];
       if (selectedPiece && piece && selectedPiece[0] !== piece[0]) {
         // Deselect if the selected piece does not belong to the current player
-        setSquareSelected(null);
+        setSquareSelected([row, col]);
       }
     }
 

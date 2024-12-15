@@ -74,9 +74,17 @@ export class Arimaa {
    * @type {[Position,Position] | null} - A tuple of two positions representing the starting and ending positions of the push or pull action.
    */
   private pushPullNextSquareCurrentPlayerHasToMove: Position | null = null;
+  /**
+   * Represents the state of the board before the current turn started.
+   *
+   * @remarks
+   * This property is necessary to validate that a player does not make a move equivalent to passing the whole turn.
+   * By comparing the current state of the board with this initial state at the end of the turn, we can ensure that
+   * the player has made meaningful moves and not just passed the turn without any actual movement.
+   */
+  private boardBeforeTurn: PieceWithSide[][] = genEmptyBoard();
 
   // TODO: should we use a constructor to initialize and check the two forms of initialization of the board: loadBoard and initializeBoard?
-
   public loadBoard(board: PieceWithSide[][]): Arimaa {
     this.board = board;
     return this;
@@ -84,10 +92,10 @@ export class Arimaa {
 
   /** place gold and silver pieces on the board for the initial setup */
   public setup(goldSetup: Piece[], silverSetup: Piece[]): Arimaa {
-    const board = genEmptyBoard();
-    this.placePieces(board, GOLD, goldSetup, 1, 2);
-    this.placePieces(board, SILVER, silverSetup, 7, 8);
-    this.board = board;
+    this.placePieces(this.board, GOLD, goldSetup, 1, 2);
+    this.placePieces(this.boardBeforeTurn, GOLD, goldSetup, 1, 2);
+    this.placePieces(this.board, SILVER, silverSetup, 7, 8);
+    this.placePieces(this.boardBeforeTurn, SILVER, silverSetup, 7, 8);
     return this;
   }
 
@@ -209,11 +217,24 @@ export class Arimaa {
 
     // Check if the piece belongs to the current player
     if (this.getSide(piece) === this.turn) {
-      return true;
+      console.log("ignore this block");
     } else {
       // Check if it's a valid push move
-      return this.checkIfIsPush(from, to);
+      const pushValidation = this.checkIfIsPush(from, to);
+      if (!pushValidation) return false;
     }
+
+    // Check: A player may no make a move equivalent to passsing the whole turn without moving
+    if (this.steps.length === 3) {
+      // if is in the 3rd step of the turn
+      const copy = this.clone();
+      copy.movePiece(from, to, piece);
+      const movesEqToPassTheWholeTurn = copy.isBoardEqualToCurrent(
+        this.boardBeforeTurn
+      );
+      if (movesEqToPassTheWholeTurn) return false;
+    }
+    return true;
   }
 
   private checkIfIsPush(from: Position, to: Position): boolean {
@@ -369,10 +390,24 @@ export class Arimaa {
         "Cannot pass the entire turn without moving the required pieces because a push / pull move has made."
       );
     }
+
+    // if is in the 2nd step and is passing turn, check if is trying to pass the whole turn without moving
+    if (this.steps.length === 2) {
+      console.log("turn to end", this.turn, this.steps.length);
+      if (this.isBoardEqualToCurrent(this.boardBeforeTurn))
+        throw new Error(
+          "Cannot pass the entire turn without moving. moves are equivalent to pass the whole turn."
+        );
+    }
     // Switch turn
     this.switchTurn();
     this.steps = []; // Reset steps
+    this.boardBeforeTurn = this.board.map((row) => [...row]); // make a copy of the current board
     this.turnCount++;
+  }
+
+  private isBoardEqualToCurrent(board: PieceWithSide[][]): boolean {
+    return JSON.stringify(this.board) === JSON.stringify(board);
   }
 
   public switchTurn(): void {
@@ -408,6 +443,7 @@ export class Arimaa {
       .pushPullNextSquareCurrentPlayerHasToMove
       ? [...this.pushPullNextSquareCurrentPlayerHasToMove]
       : null;
+    clone.boardBeforeTurn = this.boardBeforeTurn.map((row) => [...row]);
     return clone;
   }
 
@@ -427,7 +463,12 @@ export class Arimaa {
       gameCopy: Arimaa
     ) => {
       if (depth === 4) {
-        moves.push([...currentMoves]);
+        try {
+          gameCopy.giveUpTurn();
+          moves.push([...currentMoves]);
+        } catch {
+          // If an error occurs, don't add the turn to the list of turns
+        }
         return;
       }
 
@@ -456,7 +497,11 @@ export class Arimaa {
       }
 
       if (depth > 0) {
-        moves.push([...currentMoves]);
+        try {
+          moves.push([...currentMoves]);
+        } catch {
+          // If an error occurs, don't add the turn to the list of turns
+        }
       }
     };
 

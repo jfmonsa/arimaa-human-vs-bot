@@ -93,38 +93,6 @@ export default function App() {
     game: gameToDebug,
   } = useArimaaGame();
 
-  const mov0: PieceWithSide[][] = [
-    ["gR", "gD", "gR", null, null, "gC", "gR", null],
-    ["gR", "gR", "gR", null, null, "gC", "gR", null],
-    [null, null, null, null, null, null, "gH", "gH"],
-    [null, null, "gM", null, null, "gE", null, null],
-    [null, null, null, "gD", null, null, null, null],
-    [null, null, null, null, null, null, null, null],
-    ["sC", "sC", null, null, "gR", "sD", null, "sD"],
-    ["sR", "sH", null, null, null, null, "sM", "sR"],
-  ];
-
-  const mov1: PieceWithSide[][] = [
-    ["gR", "gD", "gR", null, null, "gC", "gR", null],
-    ["gR", "gR", "gR", null, null, "gC", "gR", null],
-    [null, null, null, null, null, null, "gH", "gH"],
-    [null, null, "gM", null, null, "gE", null, null],
-    [null, null, null, "gD", null, null, null, null],
-    [null, null, null, null, "gR", null, null, null],
-    ["sC", "sC", null, null, null, "sD", null, "sD"],
-    ["sR", "sH", null, null, null, null, "sM", "sR"],
-  ];
-
-  const mov2: PieceWithSide[][] = [
-    ["gR", "gD", "gR", null, null, "gC", "gR", null],
-    ["gR", "gR", "gR", null, null, "gC", "gR", null],
-    [null, null, null, null, null, null, "gH", "gH"],
-    [null, null, "gM", null, null, "gE", null, null],
-    [null, null, null, "gD", null, null, null, null],
-    [null, null, null, null, "gR", null, null, null],
-    ["sC", "sC", null, null, null, null, null, "sD"],
-    ["sR", "sH", null, null, null, "sD", "sM", "sR"],
-  ];
   useEffect(() => {
     // loadBoard(mo);
   }, [loadBoard]);
@@ -141,9 +109,6 @@ export default function App() {
       <Board board={board} makeMove={handleMakeMove} />
       <Button onClick={handleGiveUpTurn}>Finish My Turn</Button>
       {/* <Board board={boardToDebug} makeMove={makeMoveDebug} /> */}
-      <Board board={mov0} />
-      <Board board={mov1} />
-      <Board board={mov2} />
     </main>
   );
 }

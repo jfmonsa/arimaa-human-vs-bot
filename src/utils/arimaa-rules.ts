@@ -137,8 +137,18 @@ export class Arimaa {
     to: Position,
     extraOptions?: MakeMoveExtraOptions
   ): boolean {
-    console.log("makeMove", JSON.stringify([from, to]));
-    console.log("steps", JSON.stringify(this.steps));
+    console.log(
+      "makeMove",
+      JSON.stringify([from, to]),
+      "turn:",
+      this.turn,
+      "piece:",
+      this.getPiece(from),
+      "steps:",
+      this.steps.length,
+      "turn number:",
+      this.turnCount
+    );
     if (!this.validateMove(from, to)) return false;
 
     this.movePiece(from, to, this.getPiece(from));
@@ -196,14 +206,6 @@ export class Arimaa {
     // Only orthogonal moves allowed and must be one square away
     if (dx + dy !== 1) return false;
 
-    // Rabbits cannot move backward
-    if (
-      this.getPieceType(piece) === RABBIT &&
-      ((this.turn === GOLD && tx < fx) || (this.turn === SILVER && tx > fx))
-    ) {
-      return false;
-    }
-
     // Check if:
     // A player may push or pull the opponent's rabbit into the goal
     // row it is trying to reach. If at the end of the turn the rabbit remains there,
@@ -219,6 +221,7 @@ export class Arimaa {
     if (this.pushPullPossiblePiecesCurentPlayerHasToMove.length > 0) {
       // Ensure the square being moved to is one of the required squares
 
+      console.log("validating push / pull");
       const fromHasToMove = this.pushPullNextSquareCurrentPlayerHasToMove;
       if (!fromHasToMove) return false;
 
@@ -268,6 +271,18 @@ export class Arimaa {
       if (movesEqToPassTheWholeTurn) return false;
     }
 
+    // Rabbits cannot move backward
+    if (
+      !this.isCurrentMoveAPushOrPull &&
+      this.getPieceType(piece) === RABBIT &&
+      ((this.turn === GOLD && tx < fx) || (this.turn === SILVER && tx > fx))
+    ) {
+      return false;
+    }
+
+    console.log("hola");
+    console.log("sequence", JSON.stringify([...this.steps, [from, to]]));
+
     // Check if:
     // A player may push or pull the opponent's rabbit into the goal
     // row it is trying to reach. If at the end of the turn the rabbit remains there,
@@ -296,7 +311,9 @@ export class Arimaa {
 
     // Check if in the next move the player will make a move that is equivalent to pass the whole turn
     const isNextMoveEquivalentToPassTheWholeTurn =
-      this.steps.length !== 0 && isSamePosition(from, this.steps[0][0]);
+      this.steps.length > 1 &&
+      isSamePosition(from, this.steps[0][0]) &&
+      JSON.stringify(this.steps[1]) === JSON.stringify([to, from]);
 
     if (isNextMoveEquivalentToPassTheWholeTurn) {
       console.log(
@@ -322,7 +339,9 @@ export class Arimaa {
 
     // Check if in the next move the player will make a move that is equivalent to pass the whole turn
     const isNextMoveEquivalentToPassTheWholeTurn =
-      this.steps.length !== 0 && isSamePosition(from, this.steps[0][0]);
+      this.steps.length > 1 &&
+      isSamePosition(from, this.steps[0][0]) &&
+      JSON.stringify(this.steps[1]) === JSON.stringify([to, from]);
 
     if (isNextMoveEquivalentToPassTheWholeTurn) {
       console.log(

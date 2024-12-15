@@ -83,21 +83,19 @@ export default function App() {
   }, [game]);
 
   const {
-    loadBoard,
     board: boardToDebug,
     handleMakeMove: makeMoveDebug,
-    game: gameToDebug,
     loadBoard: loadBoardToDebug,
   } = useArimaaGame();
 
   useEffect(() => {
     loadBoardToDebug([
       ["gR", "gR", null, "gR", "gR", "gR", null, null],
-      [null, null, null, null, null, null, null, "gR"],
+      [null, null, "sR", null, null, null, null, "gR"],
       [null, "gH", "gC", "gR", "gH", null, null, "gR"],
       ["gE", null, null, "gC", null, "gD", null, null],
       ["sC", null, null, null, null, null, null, null],
-      [null, null, null, null, null, null, "gD", "sR"],
+      [null, null, null, null, null, null, "gD", null],
       [null, null, "gM", null, null, null, null, "sR"],
       ["sE", null, "sD", "sM", "sR", null, "sC", "sH"],
     ]);

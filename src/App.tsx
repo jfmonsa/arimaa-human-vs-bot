@@ -4,7 +4,7 @@ import { Board } from "./components/board/Board";
 import { Button } from "./components/button/Button";
 import { useArimaaGame } from "./hooks/useArimaaGame";
 import { getBestMove } from "./algos/minimax";
-import { Position, SILVER } from "./utils/arimaa-rules";
+import { PieceWithSide, Position, SILVER } from "./utils/arimaa-rules";
 
 export default function App() {
   const { board, handleMakeMove, handleGiveUpTurn, turn, game } =
@@ -14,6 +14,7 @@ export default function App() {
     []
   );
   const turnRef = useRef(turn);
+  const countTurnStepsCalculatedByBot = useRef(0);
 
   /** excecute pending moves made by bot  */
   const processNextMove = useCallback(() => {
@@ -24,9 +25,18 @@ export default function App() {
       const [from, to] = nextMove;
       handleMakeMove(from, to);
 
+      // If the bot has not finished its turn after 4 moves, give up the turn
+      if (
+        countTurnStepsCalculatedByBot.current < 4 &&
+        currentMoves.length === 1
+      ) {
+        handleGiveUpTurn();
+        countTurnStepsCalculatedByBot.current = 0;
+      }
+
       return currentMoves.slice(1);
     });
-  }, [handleMakeMove]);
+  }, [handleMakeMove, handleGiveUpTurn]);
 
   // Handles Bot's turn (SILVER) player
   useEffect(() => {
@@ -48,6 +58,7 @@ export default function App() {
       if (newMoves.length > 0) {
         setMovesToExecute(newMoves);
         turnRef.current = turn;
+        countTurnStepsCalculatedByBot.current = newMoves.length;
       }
 
       newMoves.forEach(([from, to]) => {
@@ -60,7 +71,7 @@ export default function App() {
 
     // timeout cleanup
     return () => clearTimeout(timeoutId);
-  }, [turn, game, movesToExecute.length, processNextMove]);
+  }, [turn, game, movesToExecute.length, processNextMove, handleGiveUpTurn]);
 
   // show alert when the game is over
   useEffect(() => {
@@ -74,7 +85,7 @@ export default function App() {
 
     return () => clearTimeout(timeoutId);
   }, [game]);
-  /*
+
   const {
     loadBoard,
     board: boardToDebug,
@@ -82,19 +93,42 @@ export default function App() {
     game: gameToDebug,
   } = useArimaaGame();
 
+  const mov0: PieceWithSide[][] = [
+    ["gR", "gD", "gR", null, null, "gC", "gR", null],
+    ["gR", "gR", "gR", null, null, "gC", "gR", null],
+    [null, null, null, null, null, null, "gH", "gH"],
+    [null, null, "gM", null, null, "gE", null, null],
+    [null, null, null, "gD", null, null, null, null],
+    [null, null, null, null, null, null, null, null],
+    ["sC", "sC", null, null, "gR", "sD", null, "sD"],
+    ["sR", "sH", null, null, null, null, "sM", "sR"],
+  ];
+
+  const mov1: PieceWithSide[][] = [
+    ["gR", "gD", "gR", null, null, "gC", "gR", null],
+    ["gR", "gR", "gR", null, null, "gC", "gR", null],
+    [null, null, null, null, null, null, "gH", "gH"],
+    [null, null, "gM", null, null, "gE", null, null],
+    [null, null, null, "gD", null, null, null, null],
+    [null, null, null, null, "gR", null, null, null],
+    ["sC", "sC", null, null, null, "sD", null, "sD"],
+    ["sR", "sH", null, null, null, null, "sM", "sR"],
+  ];
+
+  const mov2: PieceWithSide[][] = [
+    ["gR", "gD", "gR", null, null, "gC", "gR", null],
+    ["gR", "gR", "gR", null, null, "gC", "gR", null],
+    [null, null, null, null, null, null, "gH", "gH"],
+    [null, null, "gM", null, null, "gE", null, null],
+    [null, null, null, "gD", null, null, null, null],
+    [null, null, null, null, "gR", null, null, null],
+    ["sC", "sC", null, null, null, null, null, "sD"],
+    ["sR", "sH", null, null, null, "sD", "sM", "sR"],
+  ];
   useEffect(() => {
-    loadBoard([
-      ["gR", null, "gR", null, "gR", null, null, "gR"],
-      ["gD", "gD", "gR", null, null, null, null, "gR"],
-      [null, null, "gM", "gC", "gR", null, null, null],
-      [null, null, null, "gH", "gH", null, "gR", "gC"],
-      [null, null, null, null, "gE", null, null, null],
-      [null, null, null, null, null, null, "sR", null],
-      ["sH", null, null, null, null, null, null, "sC"],
-      ["sC", "sM", "sD", "sE", null, null, "sH", "sD"],
-    ]);
+    // loadBoard(mo);
   }, [loadBoard]);
-*/
+
   /*  useEffect(() => {
     console.log(gameToDebug.ascii());
     getBestMove(gameToDebug, 1);
@@ -107,6 +141,9 @@ export default function App() {
       <Board board={board} makeMove={handleMakeMove} />
       <Button onClick={handleGiveUpTurn}>Finish My Turn</Button>
       {/* <Board board={boardToDebug} makeMove={makeMoveDebug} /> */}
+      <Board board={mov0} />
+      <Board board={mov1} />
+      <Board board={mov2} />
     </main>
   );
 }

@@ -8,6 +8,7 @@ import {
   RABBIT,
   PieceWithSide,
   TRAP_SQUARES,
+  Position,
 } from "./arimaa-rules";
 import { shuffleArray } from "./shuffle-array";
 
@@ -41,4 +42,8 @@ export const isTrap = (row: number, col: number) => {
   return TRAP_SQUARES.some(
     ([trapRow, trapCol]) => trapRow === row && trapCol === col
   );
+};
+
+export const isSamePosition = (pos1: Position, pos2: Position) => {
+  return pos1[0] === pos2[0] && pos1[1] === pos2[1];
 };

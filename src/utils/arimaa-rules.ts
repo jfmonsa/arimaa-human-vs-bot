@@ -1,4 +1,4 @@
-import { genEmptyBoard } from "./arimaa-utils";
+import { genEmptyBoard, isSamePosition } from "./arimaa-utils";
 
 // sides
 export const GOLD = "g" as const;
@@ -30,8 +30,6 @@ export const TRAP_SQUARES: Position[] = [
   [5, 2],
   [5, 5],
 ];
-
-//type IndexRange = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 export type Position = [number, number];
 
@@ -70,6 +68,12 @@ export class Arimaa {
    * of the game by moving one of the pieces stored in this array.
    */
   private pushPullPossiblePiecesCurentPlayerHasToMove: Position[] = [];
+
+  /**
+   * Represents the next square that the current player has to move to during a push or pull action.
+   * @type {[Position,Position] | null} - A tuple of two positions representing the starting and ending positions of the push or pull action.
+   */
+  private pushPullNextSquareCurrentPlayerHasToMove: Position | null = null;
 
   // TODO: should we use a constructor to initialize and check the two forms of initialization of the board: loadBoard and initializeBoard?
 
@@ -178,20 +182,28 @@ export class Arimaa {
     ) {
       return false;
     }
-
     // Check if previous move was a push or pull
     // Check if there are pieces that the current player must move due to a previous push or pull
     if (this.pushPullPossiblePiecesCurentPlayerHasToMove.length > 0) {
+      // Ensure the square being moved to is one of the required squares
+
+      const fromHasToMove = this.pushPullNextSquareCurrentPlayerHasToMove;
+      if (!fromHasToMove) return false;
+
+      // new move to square must be the same as the previous move from square of the pushed piece
+      if (!isSamePosition(to, fromHasToMove)) return false;
+
+      const isCurrentPieceNotARequired =
+        !this.pushPullPossiblePiecesCurentPlayerHasToMove.some((pos) =>
+          isSamePosition(pos, from)
+        );
       // Ensure the piece being moved is one of the required pieces
-      if (
-        !this.pushPullPossiblePiecesCurentPlayerHasToMove.some(
-          (pos) => pos[0] === fx && pos[1] === fy
-        )
-      ) {
+      if (isCurrentPieceNotARequired) {
         return false;
       } else {
         // If the clean the list of pieces that must be moved
         this.pushPullPossiblePiecesCurentPlayerHasToMove = [];
+        this.pushPullNextSquareCurrentPlayerHasToMove = null;
       }
     }
 
@@ -204,8 +216,7 @@ export class Arimaa {
     }
   }
 
-  private checkIfIsPush(from: Position, _to: Position): boolean {
-    // TODO: check if is necessary `_to` parameter
+  private checkIfIsPush(from: Position, to: Position): boolean {
     // 2. current player has avaliable steps in the current turn?
     if (4 - this.steps.length < 2) return false;
     // 1. enemy piece has stroger current's players pieces neighbors
@@ -215,6 +226,9 @@ export class Arimaa {
 
     // store the pieces that the current player must move in the next step
     this.pushPullPossiblePiecesCurentPlayerHasToMove = strongerNeighbors;
+    // store the next square that the current player has to move to
+    this.pushPullNextSquareCurrentPlayerHasToMove = from;
+    console.log("Is a push move" + this.getPiece(from), "move:", [from, to]);
     return true;
   }
 
@@ -390,6 +404,10 @@ export class Arimaa {
     clone.steps = this.steps.map((step) => [...step]);
     clone.pushPullPossiblePiecesCurentPlayerHasToMove =
       this.pushPullPossiblePiecesCurentPlayerHasToMove.map((pos) => [...pos]);
+    clone.pushPullNextSquareCurrentPlayerHasToMove = this
+      .pushPullNextSquareCurrentPlayerHasToMove
+      ? [...this.pushPullNextSquareCurrentPlayerHasToMove]
+      : null;
     return clone;
   }
 

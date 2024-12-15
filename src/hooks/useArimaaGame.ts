@@ -46,15 +46,19 @@ export function useArimaaGame() {
     [game]
   );
 
-  const handleGiveUpTurn = useCallback(() => {
-    try {
-      game.giveUpTurn();
-      setGame(game.clone());
-    } catch (e) {
-      console.warn(e);
-      if (e instanceof Error) alert(e.message);
-    }
-  }, [game]);
+  const handleGiveUpTurn = useCallback(
+    (wasBot = false) => {
+      try {
+        game.giveUpTurn(wasBot && game.getTurn() === "s");
+        setGame(game.clone());
+      } catch (e) {
+        if (wasBot && game.getTurn() === "s") return; // workaround for bot, fix this
+        console.warn(e);
+        if (e instanceof Error) alert(e.message);
+      }
+    },
+    [game]
+  );
 
   const loadBoard = useCallback(
     (board: PieceWithSide[][]) => {

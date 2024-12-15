@@ -30,7 +30,7 @@ export default function App() {
         countTurnStepsCalculatedByBot.current < 4 &&
         currentMoves.length === 1
       ) {
-        handleGiveUpTurn();
+        handleGiveUpTurn(true);
         countTurnStepsCalculatedByBot.current = 0;
       }
 

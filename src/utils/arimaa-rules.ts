@@ -380,19 +380,24 @@ export class Arimaa {
   /**
    * Ends the current player's turn and switches to the other player.
    */
-  public giveUpTurn(): void {
-    if (this.steps.length === 0) {
+  public giveUpTurn(wasBot = false): void {
+    // TODO: wasBot is a workaround for the bot, fix this
+
+    if (this.steps.length === 0 && !wasBot) {
       throw new Error("Cannot pass the entire turn without moving.");
     }
 
-    if (this.pushPullPossiblePiecesCurentPlayerHasToMove.length > 0) {
+    if (
+      this.pushPullPossiblePiecesCurentPlayerHasToMove.length > 0 &&
+      !wasBot
+    ) {
       throw new Error(
         "Cannot pass the entire turn without moving the required pieces because a push / pull move has made."
       );
     }
 
     // if is in the 2nd step and is passing turn, check if is trying to pass the whole turn without moving
-    if (this.steps.length === 2) {
+    if (this.steps.length === 2 && !wasBot) {
       console.log("turn to end", this.turn, this.steps.length);
       if (this.isBoardEqualToCurrent(this.boardBeforeTurn))
         throw new Error(
@@ -464,7 +469,6 @@ export class Arimaa {
     ) => {
       if (depth === 4) {
         try {
-          gameCopy.giveUpTurn();
           moves.push([...currentMoves]);
         } catch {
           // If an error occurs, don't add the turn to the list of turns
@@ -483,15 +487,15 @@ export class Arimaa {
               [x, y],
               [nx, ny],
             ];
-            currentMoves.push(move);
 
             // Create a new copy of the game state
             const newGameCopy = gameCopy.clone();
             const result = newGameCopy.makeMove([x, y], [nx, ny]); // Apply the move using makeMove
             if (result) {
+              currentMoves.push(move);
               generateMoves(currentMoves, depth + 1, newGameCopy);
+              currentMoves.pop();
             }
-            currentMoves.pop();
           });
         }
       }

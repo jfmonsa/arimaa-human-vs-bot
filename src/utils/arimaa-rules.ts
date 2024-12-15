@@ -87,6 +87,9 @@ export class Arimaa {
    */
   private boardBeforeTurn: PieceWithSide[][] = genEmptyBoard();
 
+  private isCurrentMoveAPushOrPull = false;
+  private hasAPushOrPullBeenMadeInPreviousTurn = false;
+
   // TODO: should we use a constructor to initialize and check the two forms of initialization of the board: loadBoard and initializeBoard?
   public loadBoard(board: PieceWithSide[][]): Arimaa {
     this.board = board;
@@ -187,8 +190,6 @@ export class Arimaa {
     // Empty square or target square is not empty
     if (!piece || targetSquare) return false;
 
-    if (this.isGameOver()) return false;
-
     const dx = Math.abs(fx - tx);
     const dy = Math.abs(fy - ty);
 
@@ -201,6 +202,15 @@ export class Arimaa {
       ((this.turn === GOLD && tx < fx) || (this.turn === SILVER && tx > fx))
     ) {
       return false;
+    }
+
+    // Check if:
+    // A player may push or pull the opponent's rabbit into the goal
+    // row it is trying to reach. If at the end of the turn the rabbit remains there,
+    // the player loses. However if the opponent's rabbit is moved back out of the goal
+    if (this.steps.length === 0 && this.hasAPushOrPullBeenMadeInPreviousTurn) {
+      this.hasAPushOrPullBeenMadeInPreviousTurn = false;
+      if (this.isGameOver()) return false;
     }
 
     let prevMoveWasAPull = false;
@@ -257,6 +267,22 @@ export class Arimaa {
       );
       if (movesEqToPassTheWholeTurn) return false;
     }
+
+    // Check if:
+    // A player may push or pull the opponent's rabbit into the goal
+    // row it is trying to reach. If at the end of the turn the rabbit remains there,
+    // the player loses. However if the opponent's rabbit is moved back out of the goal
+    // row before the end of the turn, the player does not lose.
+    if (
+      this.isCurrentMoveAPushOrPull &&
+      this.pushPullPossiblePiecesCurentPlayerHasToMove.length === 0
+    ) {
+      // Clean isCurrentMoveAPushOrPull flag when the second part of a push or pull move is made (push / pull move completed)
+      this.hasAPushOrPullBeenMadeInPreviousTurn = true;
+    }
+
+    if (!this.hasAPushOrPullBeenMadeInPreviousTurn && this.isGameOver())
+      return false;
     return true;
   }
 
@@ -268,19 +294,9 @@ export class Arimaa {
 
     if (strongerNeighbors.length === 0) return false;
 
-    // store the pieces that the current player must move in the next step
-    this.pushPullPossiblePiecesCurentPlayerHasToMove = strongerNeighbors;
-    // store the next square that the current player has to move to
-    this.pushPullNextSquareCurrentPlayerHasToMove = from;
-    console.log("Is a push move" + this.getPiece(from), "move:", [from, to]);
-
     // Check if in the next move the player will make a move that is equivalent to pass the whole turn
     const isNextMoveEquivalentToPassTheWholeTurn =
-      this.steps.length !== 0 &&
-      isSamePosition(
-        this.pushPullNextSquareCurrentPlayerHasToMove,
-        this.steps[0][0]
-      );
+      this.steps.length !== 0 && isSamePosition(from, this.steps[0][0]);
 
     if (isNextMoveEquivalentToPassTheWholeTurn) {
       console.log(
@@ -288,6 +304,11 @@ export class Arimaa {
       );
       return false;
     }
+    // store data to validate the second part (2nd step) of a push move
+    this.pushPullPossiblePiecesCurentPlayerHasToMove = strongerNeighbors;
+    this.pushPullNextSquareCurrentPlayerHasToMove = from;
+    this.isCurrentMoveAPushOrPull = true;
+    console.log("Is a push move" + this.getPiece(from), "move:", [from, to]);
     return true;
   }
 
@@ -299,19 +320,9 @@ export class Arimaa {
 
     if (weakerAdjacentEnemies.length === 0) return false;
 
-    // store the pieces that the current player must move in the next step
-    this.pushPullPossiblePiecesCurentPlayerHasToMove = weakerAdjacentEnemies;
-    // store the next square that the current player has to move to
-    this.pushPullNextSquareCurrentPlayerHasToMove = from;
-    console.log("Is a pull move" + this.getPiece(from), "move:", [from, to]);
-
     // Check if in the next move the player will make a move that is equivalent to pass the whole turn
     const isNextMoveEquivalentToPassTheWholeTurn =
-      this.steps.length !== 0 &&
-      isSamePosition(
-        this.pushPullNextSquareCurrentPlayerHasToMove,
-        this.steps[0][0]
-      );
+      this.steps.length !== 0 && isSamePosition(from, this.steps[0][0]);
 
     if (isNextMoveEquivalentToPassTheWholeTurn) {
       console.log(
@@ -319,6 +330,11 @@ export class Arimaa {
       );
       return false;
     }
+    // store data to validate the second part (2nd step) of a pull move
+    this.pushPullPossiblePiecesCurentPlayerHasToMove = weakerAdjacentEnemies;
+    this.pushPullNextSquareCurrentPlayerHasToMove = from;
+    this.isCurrentMoveAPushOrPull = true;
+    console.log("Is a pull move" + this.getPiece(from), "move:", [from, to]);
     return true;
   }
 
@@ -477,19 +493,17 @@ export class Arimaa {
    * @returns {boolean} - Returns `true` if any victory condition is met, otherwise `false`.
    */
   public isGameOver(): boolean {
-    // Check if a rabbit reached the opposing goal row
+    // 1. Check if a rabbit reached the opposing goal row
     const goldWins = this.board[7].some((cell) => cell === "gR");
     const silverWins = this.board[0].some((cell) => cell === "sR");
 
     if (goldWins || silverWins) return true;
 
-    // Check if either side has no rabbits left
+    // 2. Check if either side has no rabbits left
     const goldHasRabbits = this.board.flat().some((cell) => cell === "gR");
     const silverHasRabbits = this.board.flat().some((cell) => cell === "sR");
 
     if (!goldHasRabbits || !silverHasRabbits) return true;
-
-    // Future: Add additional win conditions like freezing all pieces, repetition rules, etc.
     return false;
   }
 
@@ -529,6 +543,7 @@ export class Arimaa {
         "Cannot pass the entire turn without moving. moves are equivalent to pass the whole turn."
       );
     }
+
     // Switch turn
     this.switchTurn();
     this.steps = []; // Reset steps
@@ -574,6 +589,9 @@ export class Arimaa {
       ? [...this.pushPullNextSquareCurrentPlayerHasToMove]
       : null;
     clone.boardBeforeTurn = this.boardBeforeTurn.map((row) => [...row]);
+    clone.isCurrentMoveAPushOrPull = this.isCurrentMoveAPushOrPull;
+    clone.hasAPushOrPullBeenMadeInPreviousTurn =
+      this.hasAPushOrPullBeenMadeInPreviousTurn;
     return clone;
   }
 

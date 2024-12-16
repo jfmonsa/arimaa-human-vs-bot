@@ -657,6 +657,10 @@ export class Arimaa {
     this.turn = this.turn === GOLD ? SILVER : GOLD;
   }
 
+  // TODO: Arimaa class should no be responsible for implement generateLegalMoves method
+  // thus, it is the responsability of bot algorithm, in order to include only strategy / tatic valuable moves
+  // and reduce the branching-factor of the search tree
+
   /**
    * Generates all possible legal turns for the board state up to a depth of 4 steps.
    * Each turn is represented as an array of steps, where each step is a tuple containing
@@ -697,7 +701,8 @@ export class Arimaa {
         }
       }
 
-      if (depth > 0) {
+      // TODO: as a workaround to reduce the branching factor of the search tree dont include less than 4 steps turns
+      /*if (depth > 0) {
         // For gen turns with less than 4 steps -> 1, 2, 3
         try {
           gameCopy.giveUpTurn();
@@ -705,7 +710,7 @@ export class Arimaa {
         } catch {
           // If an error occurs, don't add the turn to the list of turns
         }
-      }
+      }*/
     };
 
     const gameCopy = this.clone(); // Create a copy of the game state

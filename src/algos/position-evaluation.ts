@@ -7,6 +7,7 @@ import {
   ELEPHANT,
   GOLD,
   HORSE,
+  PieceWithSide,
   RABBIT,
   Side,
   SILVER,
@@ -23,8 +24,27 @@ const PIECE_VALUES: Record<string, number> = {
   [ELEPHANT]: 10, // Elephants are the strongest
 };
 
+// Transposition table for storing evaluated positions, to avoid re-evaluation
+export const transpositionTable = new Map<string, number>();
+
+let transpositionTableHits = 0;
+
+// Function to generate a hash for the board state
+function hashBoard(board: PieceWithSide[][]): string {
+  return board.flat().join("");
+}
+
 export function evaluateBoard(game: Arimaa, perspective: Side): number {
   const board = game.getBoard();
+  const boardHash = hashBoard(board);
+
+  // Check if the board state is already evaluated
+  if (transpositionTable.has(boardHash)) {
+    ++transpositionTableHits;
+    console.log(`Transposition table hit! # ${transpositionTableHits}`);
+    return transpositionTable.get(boardHash)!;
+  }
+
   let goldScore = 0;
   let silverScore = 0;
 
@@ -79,9 +99,13 @@ export function evaluateBoard(game: Arimaa, perspective: Side): number {
   silverScore += calculateMobilityBonus(game, SILVER);
 
   // Adjustment for player's perspective
-  return perspective === GOLD
-    ? goldScore - silverScore
-    : silverScore - goldScore;
+  const score =
+    perspective === GOLD ? goldScore - silverScore : silverScore - goldScore;
+
+  // Store the evaluated score in the transposition table
+  transpositionTable.set(boardHash, score);
+
+  return score;
 }
 
 // Calculate bonus for center control

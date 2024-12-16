@@ -1,5 +1,5 @@
 import { Arimaa, Position } from "../utils/arimaa-rules";
-import { evaluateBoard } from "./position-evaluation";
+import { evaluateBoard, transpositionTable } from "./position-evaluation";
 
 /**
  * Minimax algorithm to decide the best move for the current player.
@@ -17,6 +17,10 @@ export function minimax(
 ): { score: number; moves: [Position, Position][] } {
   if (depth === 0 || game.isGameOver()) {
     // TODO: pass side dynamically
+    console.log(
+      "Nodes (Boards) stored in transposition table",
+      transpositionTable.size
+    );
     return { score: evaluateBoard(game, "g"), moves: [] };
   }
   const legalMoves = game.generateLegalMoves();
@@ -72,7 +76,6 @@ export function getBestMove(
   game: Arimaa,
   depth: number
 ): [Position, Position][] {
-  console.log("Getting best move...");
   const { moves } = minimax(game, depth, true);
   return moves;
 }

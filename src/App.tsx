@@ -49,6 +49,7 @@ export default function App() {
 
     // Only generate moves if it's the computer's turn and the turn has changed
     if (turn === SILVER && turn !== turnRef.current) {
+      console.log("Calculating bot's turn...");
       const newMoves = getBestMove(game, 1); // Depth 1 for now
 
       if (newMoves.length > 0) {

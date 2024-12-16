@@ -281,7 +281,7 @@ export class Arimaa {
         !this.wasPreviousStepTheFirstPartOfAPull &&
         !this.checkIfIsPush(from, to)
       ) {
-        console.log("Invalid move: Finish the pull move or make a push");
+        //console.log("Invalid move: Finish the pull move or make a push");
         return false;
       }
       // Only the second part of a pull would reach this point
@@ -336,16 +336,14 @@ export class Arimaa {
       JSON.stringify(this.steps[1]) === JSON.stringify([to, from]);
 
     if (isNextMoveEquivalentToPassTheWholeTurn) {
-      console.log(
-        "Is a push move that is equivalent to pass the whole turn (previous move was a pull from the same square)"
-      );
+      //console.log("Is a push move that is equivalent to pass the whole turn (previous move was a pull from the same square)");
       return false;
     }
     // store data to validate the second part (2nd step) of a push move
     this.pushPullPossiblePiecesCurentPlayerHasToMove = strongerNeighbors;
     this.pushPullNextSquareCurrentPlayerHasToMove = from;
     this.isCurrentMoveAPushOrPull = true;
-    console.log("Is a push move" + this.getPiece(from), "move:", [from, to]);
+    //console.log("Is a push move" + this.getPiece(from), "move:", [from, to]);
     return true;
   }
 
@@ -364,9 +362,7 @@ export class Arimaa {
       JSON.stringify(this.steps[1]) === JSON.stringify([to, from]);
 
     if (isNextMoveEquivalentToPassTheWholeTurn) {
-      console.log(
-        "Is a pull move that is equivalent to pass the whole turn (previous move was a push from the same square)"
-      );
+      //console.log("Is a pull move that is equivalent to pass the whole turn (previous move was a push from the same square)");
       return false;
     }
     // store data to validate the second part (2nd step) of a pull move
@@ -374,7 +370,7 @@ export class Arimaa {
     this.pushPullNextSquareCurrentPlayerHasToMove = from;
     this.isCurrentMoveAPushOrPull = true;
     this.wasPreviousStepTheFirstPartOfAPull = true;
-    console.log("Is a pull move" + this.getPiece(from), "move:", [from, to]);
+    //console.log("Is a pull move" + this.getPiece(from), "move:", [from, to]);
     return true;
   }
 

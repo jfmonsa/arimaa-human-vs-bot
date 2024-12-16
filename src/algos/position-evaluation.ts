@@ -2,6 +2,7 @@ import {
   Arimaa,
   CAMEL,
   CAT,
+  DIRECTIONS,
   DOG,
   ELEPHANT,
   GOLD,
@@ -131,14 +132,8 @@ function countPotentialMoves(game: Arimaa, position: [number, number]): number {
   if (!piece) return 0;
 
   const [row, col] = position;
-  const directions = [
-    [0, 1],
-    [0, -1],
-    [1, 0],
-    [-1, 0],
-  ];
 
-  return directions.filter(([dRow, dCol]) => {
+  return DIRECTIONS.filter(([dRow, dCol]) => {
     const newRow = row + dRow;
     const newCol = col + dCol;
 

@@ -40,7 +40,7 @@ export default function App() {
     let timeoutId: number;
 
     if (movesToExecute.length > 0) {
-      // Delay of 500ms for more natural moves
+      // Delay of 1000ms for more natural moves
       timeoutId = setTimeout(() => {
         processNextMove();
       }, 1000);
@@ -77,8 +77,8 @@ export default function App() {
 
     return () => clearTimeout(timeoutId);
   }, [game]);
-  /*
-  const {
+
+  /*const {
     board: boardToDebug,
     handleMakeMove: makeMoveDebug,
     loadBoard: loadBoardToDebug,
@@ -108,29 +108,28 @@ export default function App() {
       [null, null, "sD", null, "gD", null, null, null],
     ];
 
-    loadBoardToDebug(board1 as PieceWithSide[][]);
+    const captureLastSilverRabitBoard = [
+      ["gR", "gR", "gC", "gR", "gR", "gR", null, null],
+      [null, null, "sR", null, null, null, null, "gR"],
+      [null, "gH", null, "gR", "gH", null, null, "gR"],
+      ["gE", null, null, "gC", null, "gD", null, null],
+      ["sC", null, null, null, null, null, null, null],
+      [null, null, null, null, null, null, "gD", null],
+      [null, null, "gM", null, null, null, null, null],
+      ["sE", null, "sD", "sM", null, null, "sC", null],
+    ];
+
+    loadBoardToDebug(captureLastSilverRabitBoard as PieceWithSide[][]);
   }, [loadBoardToDebug]);
+  }, [gameToDebug]);*/
 
-  // show alert when the game is over
-  useEffect(() => {
-    if (!gameToDebug.isGameOver()) return;
-
-    const timeoutId = setTimeout(() => {
-      alert(
-        `Game Over - Winner: ${gameToDebug.getWinner()} in ${gameToDebug.getTurn()} turns`
-      );
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
-  }, [gameToDebug]);
-*/
   return (
     <main>
       <h1> Arimaa Game: Human vs Computer</h1>
       <p>Turn: {turn}</p>
       <Board board={board} makeMove={handleMakeMove} />
       <Button onClick={handleGiveUpTurn}>Finish My Turn</Button>
-      {/*<Board board={boardToDebug} makeMove={makeMoveDebug} />*/}
+      {/* <Board board={boardToDebug} makeMove={makeMoveDebug} /> */}
     </main>
   );
 }

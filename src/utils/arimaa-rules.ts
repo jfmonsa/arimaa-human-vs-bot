@@ -113,10 +113,37 @@ export class Arimaa {
   private hasPushOrPullBeenMadeInTheTurn = false;
 
   private wasPreviousStepTheFirstPartOfAPull = false;
+  private pieceWhichHasMoved: PieceWithSide = null;
+
+  /**
+   * deep copy of the Arimaa instance
+   * @returns A new Arimaa instance with the board state after the move.
+   */
+  public clone(): Arimaa {
+    const clone = new Arimaa();
+    clone.board = this.board.map((row) => [...row]);
+    clone.turn = this.turn;
+    clone.turnCount = this.turnCount;
+    clone.steps = this.steps.map((step) => [...step]);
+    clone.pushPullPossiblePiecesCurentPlayerHasToMove =
+      this.pushPullPossiblePiecesCurentPlayerHasToMove.map((pos) => [...pos]);
+    clone.pushPullNextSquareCurrentPlayerHasToMove = this
+      .pushPullNextSquareCurrentPlayerHasToMove
+      ? [...this.pushPullNextSquareCurrentPlayerHasToMove]
+      : null;
+    clone.boardBeforeTurn = this.boardBeforeTurn.map((row) => [...row]);
+    clone.isCurrentMoveAPushOrPull = this.isCurrentMoveAPushOrPull;
+    clone.hasPushOrPullBeenMadeInTheTurn = this.hasPushOrPullBeenMadeInTheTurn;
+    clone.wasPreviousStepTheFirstPartOfAPull =
+      this.wasPreviousStepTheFirstPartOfAPull;
+    clone.pieceWhichHasMoved = this.pieceWhichHasMoved;
+    return clone;
+  }
 
   /** Loads the given board configuration into the current Arimaa game instance. */
   public loadBoard(board: PieceWithSide[][]): Arimaa {
     this.board = board;
+    this.boardBeforeTurn = board.map((row) => [...row]);
     return this;
   }
 
@@ -124,6 +151,7 @@ export class Arimaa {
   public setup(goldSetup: Piece[], silverSetup: Piece[]): Arimaa {
     this.placePieces(GOLD, goldSetup, 1, 2);
     this.placePieces(SILVER, silverSetup, 7, 8);
+    this.boardBeforeTurn = this.board.map((row) => [...row]);
     return this;
   }
 
@@ -167,10 +195,7 @@ export class Arimaa {
     this.handleTraps();
 
     // Check if the turn should end
-    if (
-      this.steps.length === 4 ||
-      (extraOptions && extraOptions.needToPassTurnAfterMoveDone)
-    ) {
+    if (this.steps.length === 4 || extraOptions?.needToPassTurnAfterMoveDone) {
       this.giveUpTurn();
     }
 
@@ -204,6 +229,7 @@ export class Arimaa {
       return false;
 
     const piece = this.getPiece(from);
+    this.pieceWhichHasMoved = piece;
     const targetSquare = this.getPiece(to);
 
     // Empty square or target square is not empty
@@ -215,20 +241,7 @@ export class Arimaa {
     // Only orthogonal moves allowed and must be one square away
     if (dx + dy !== 1) return false;
 
-    /*console.log(
-      "makeMove",
-      JSON.stringify([from, to]),
-      "turn:",
-      this.turn,
-      "piece:",
-      this.getPiece(from),
-      "steps:",
-      this.steps.length,
-      "turn number:",
-      this.turnCount
-    );*/
-
-    // Check if previous move was a push or pull
+    // Check if previous move was a push or pull (Validate second part of push / pull)
     // Check if there are pieces that the current player must move due to a previous push or pull
     if (this.pushPullPossiblePiecesCurentPlayerHasToMove.length > 0) {
       // Ensure the square being moved to is one of the required squares
@@ -263,21 +276,19 @@ export class Arimaa {
       this.checkIfIsPull(from, to); // don't return false because even if is not a pull move, is a valid move
     } else {
       // Check if it's a valid push move
-      const pushValidation = this.checkIfIsPush(from, to);
-      if (!this.wasPreviousStepTheFirstPartOfAPull && !pushValidation) {
-        console.log(
-          "Not a valid push move",
-          !this.wasPreviousStepTheFirstPartOfAPull,
-          pushValidation
-        );
+
+      if (
+        !this.wasPreviousStepTheFirstPartOfAPull &&
+        !this.checkIfIsPush(from, to)
+      ) {
+        console.log("Invalid move: Finish the pull move or make a push");
         return false;
       }
       // Only the second part of a pull would reach this point
       // -> update flag to false after the second part of a pull move is made
       this.wasPreviousStepTheFirstPartOfAPull = false;
     }
-
-    // Check: A player may no make a move equivalent to passsing the whole turn without moving
+    // Check: A player may no make a move equivalent to passsing the whole turn without moving (check every 2nd step)
     if (this.steps.length === 3) {
       // if is in the 3rd step of the turn
       const copy = this.clone();
@@ -288,12 +299,12 @@ export class Arimaa {
       if (movesEqToPassTheWholeTurn) return false;
     }
 
-    // Rabbits cannot move backward
-    if (
-      !this.isCurrentMoveAPushOrPull &&
-      this.getPieceType(piece) === RABBIT &&
-      ((this.turn === GOLD && tx < fx) || (this.turn === SILVER && tx > fx))
-    ) {
+    // Rabbits cannot move backward except if are pulled / pushed by rival
+    const isRabbitMovingBackward =
+      (this.getPieceType(piece) === RABBIT && this.turn === GOLD && tx < fx) ||
+      (this.turn === SILVER && tx > fx);
+
+    if (!this.isCurrentMoveAPushOrPull && isRabbitMovingBackward) {
       return false;
     }
 
@@ -509,27 +520,50 @@ export class Arimaa {
    */
   public isGameOver(): boolean {
     // 1. Check if a rabbit reached the opposing goal row
-    const hasRabbitReachedGoal = (row: number, rabbit: string): boolean => {
-      return this.board[row].some((cell) => cell === rabbit);
-    };
 
     // Check if:
     // A player may push or pull the opponent's rabbit into the goal
     // row it is trying to reach. If at the end of the turn the rabbit remains there,
     // the player loses. However if the opponent's rabbit is moved back out of the goal
-    const isInTheMiddleOfAPushOrPull =
+    const isInTheMiddleOfAPushOrPullTurn =
       this.isCurrentMoveAPushOrPull || this.hasPushOrPullBeenMadeInTheTurn;
 
-    if (!isInTheMiddleOfAPushOrPull) {
-      const goldWins = hasRabbitReachedGoal(7, "gR");
-      const silverWins = hasRabbitReachedGoal(0, "sR");
+    if (!isInTheMiddleOfAPushOrPullTurn) {
+      const goldWins = this.hasRabbitReachedGoal(7, "gR");
+      const silverWins = this.hasRabbitReachedGoal(0, "sR");
       if (goldWins || silverWins) return true;
+    } else {
+      // Only check current if player's rabbit has reached the goal row
+      if (!this.pieceWhichHasMoved) return false;
+      const pieceSide = this.getSide(this.pieceWhichHasMoved);
+      const goalRow = pieceSide === GOLD ? 7 : 0;
+      const rabbit = pieceSide === GOLD ? "gR" : "sR";
+      if (this.hasRabbitReachedGoal(goalRow, rabbit)) return true;
+    }
+
+    // 2. Check if either side has no rabbits left on the board
+    // If both players lose all rabbits on the same move, the player making the move wins
+    // If just have finished a turn
+    // TODO: review Arimaa rules to check if this is correct
+    if (this.steps.length === 0) {
+      const goldRabbits = this.board
+        .flat()
+        .filter((piece) => piece === "gR").length;
+      const silverRabbits = this.board
+        .flat()
+        .filter((piece) => piece === "sR").length;
+
+      return goldRabbits === 0 || silverRabbits === 0;
     }
 
     // 3. Check if all pieces of the current player are frozen or blocked
     if (this.areAllPiecesFrozenOrBlocked(this.turn)) return true;
 
     return false;
+  }
+
+  private hasRabbitReachedGoal(row: number, rabbit: "gR" | "sR"): boolean {
+    return this.board[row].some((cell) => cell === rabbit);
   }
 
   /**
@@ -589,7 +623,10 @@ export class Arimaa {
       throw new Error("Cannot pass the entire turn without moving.");
     }
 
-    if (this.pushPullPossiblePiecesCurentPlayerHasToMove.length > 0) {
+    if (
+      !this.wasPreviousStepTheFirstPartOfAPull &&
+      this.pushPullPossiblePiecesCurentPlayerHasToMove.length > 0
+    ) {
       throw new Error(
         "Cannot pass the entire turn without moving the required pieces because a push / pull move has made."
       );
@@ -620,33 +657,8 @@ export class Arimaa {
     this.turnCount++;
   }
 
-  public switchTurn(): void {
+  private switchTurn(): void {
     this.turn = this.turn === GOLD ? SILVER : GOLD;
-  }
-
-  /**
-   * deep copy of the Arimaa instance
-   *
-   * @returns A new Arimaa instance with the board state after the move.
-   */
-  public clone(): Arimaa {
-    const clone = new Arimaa();
-    clone.board = this.board.map((row) => [...row]);
-    clone.turn = this.turn;
-    clone.turnCount = this.turnCount;
-    clone.steps = this.steps.map((step) => [...step]);
-    clone.pushPullPossiblePiecesCurentPlayerHasToMove =
-      this.pushPullPossiblePiecesCurentPlayerHasToMove.map((pos) => [...pos]);
-    clone.pushPullNextSquareCurrentPlayerHasToMove = this
-      .pushPullNextSquareCurrentPlayerHasToMove
-      ? [...this.pushPullNextSquareCurrentPlayerHasToMove]
-      : null;
-    clone.boardBeforeTurn = this.boardBeforeTurn.map((row) => [...row]);
-    clone.isCurrentMoveAPushOrPull = this.isCurrentMoveAPushOrPull;
-    clone.hasPushOrPullBeenMadeInTheTurn = this.hasPushOrPullBeenMadeInTheTurn;
-    clone.wasPreviousStepTheFirstPartOfAPull =
-      this.wasPreviousStepTheFirstPartOfAPull;
-    return clone;
   }
 
   /**
@@ -671,21 +683,17 @@ export class Arimaa {
 
       for (let x = 0; x < 8; x++) {
         for (let y = 0; y < 8; y++) {
-          const piece = gameCopy.getPiece([x, y]);
+          const from: Position = [x, y];
+          const piece = gameCopy.getPiece(from);
           if (!piece) continue;
 
-          const neighbors = gameCopy.getNeighbors([x, y]);
-          neighbors.forEach(([nx, ny]) => {
-            const move: [Position, Position] = [
-              [x, y],
-              [nx, ny],
-            ];
-
+          const neighbors = gameCopy.getNeighbors(from);
+          neighbors.forEach((to) => {
             // Create a new copy of the game state
             const newGameCopy = gameCopy.clone();
-            const result = newGameCopy.makeMove([x, y], [nx, ny]); // Apply the move using makeMove
+            const result = newGameCopy.makeMove(from, to); // Apply the move using makeMove
             if (result) {
-              currentMoves.push(move);
+              currentMoves.push([from, to]);
               generateMoves(currentMoves, depth + 1, newGameCopy);
               currentMoves.pop();
             }

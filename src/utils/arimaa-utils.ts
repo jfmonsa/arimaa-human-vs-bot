@@ -39,11 +39,11 @@ export function genEmptyBoard(): PieceWithSide[][] {
 }
 
 export const isTrap = (row: number, col: number) => {
-  return TRAP_SQUARES.some(
-    ([trapRow, trapCol]) => trapRow === row && trapCol === col
+  return TRAP_SQUARES.some((trapPosition) =>
+    isSamePosition(trapPosition, [row, col])
   );
 };
 
-export const isSamePosition = (pos1: Position, pos2: Position) => {
+export function isSamePosition(pos1: Position, pos2: Position) {
   return pos1[0] === pos2[0] && pos1[1] === pos2[1];
-};
+}

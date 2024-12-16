@@ -9,16 +9,17 @@ import {
   RABBIT,
   Side,
   SILVER,
+  TRAP_SQUARES,
 } from "../utils/arimaa-rules";
 
-// Valores de las piezas para la evaluación
+// Piece values for evaluation
 const PIECE_VALUES: Record<string, number> = {
-  [RABBIT]: 1, // Conejos son los más valiosos estratégicamente
+  [RABBIT]: 1, // Rabbits are the most valuable strategically
   [CAT]: 3,
   [DOG]: 4,
   [HORSE]: 5,
   [CAMEL]: 7,
-  [ELEPHANT]: 10, // Elefantes son los más fuertes
+  [ELEPHANT]: 10, // Elephants are the strongest
 };
 
 export function evaluateBoard(game: Arimaa, perspective: Side): number {
@@ -26,7 +27,7 @@ export function evaluateBoard(game: Arimaa, perspective: Side): number {
   let goldScore = 0;
   let silverScore = 0;
 
-  // Evaluar piezas y posiciones
+  // Evaluate pieces and positions
   for (let row = 0; row < 8; row++) {
     for (let col = 0; col < 8; col++) {
       const piece = board[row][col];
@@ -35,25 +36,25 @@ export function evaluateBoard(game: Arimaa, perspective: Side): number {
       const [side, type] = [piece[0], piece[1]] as [Side, string];
       const pieceValue = PIECE_VALUES[type];
 
-      // Valor base de la pieza
+      // Base value of the piece
       if (side === GOLD) {
         goldScore += pieceValue;
       } else {
         silverScore += pieceValue;
       }
 
-      // Bonus para conejos cerca de su objetivo
+      // Bonus for rabbits near their goal
       if (type === RABBIT) {
         if (side === GOLD) {
-          // Bonus por acercarse a las filas superiores
+          // Bonus for approaching the top rows
           goldScore += (7 - row) * 2;
         } else {
-          // Bonus por acercarse a las filas inferiores
+          // Bonus for approaching the bottom rows
           silverScore += row * 2;
         }
       }
 
-      // Bonus por control del centro
+      // Bonus for center control
       const centerBonus = calculateCenterControlBonus(row, col);
       if (side === GOLD) {
         goldScore += centerBonus;
@@ -61,7 +62,7 @@ export function evaluateBoard(game: Arimaa, perspective: Side): number {
         silverScore += centerBonus;
       }
 
-      // Penalización por piezas inmovilizadas
+      // Penalty for trapped pieces
       if (isPieceTrapped(game, [row, col])) {
         if (side === GOLD) {
           goldScore -= pieceValue / 2;
@@ -72,43 +73,37 @@ export function evaluateBoard(game: Arimaa, perspective: Side): number {
     }
   }
 
-  // Bonus por movilidad de piezas
+  // Bonus for piece mobility
   goldScore += calculateMobilityBonus(game, GOLD);
   silverScore += calculateMobilityBonus(game, SILVER);
 
-  // Ajuste para la perspectiva del jugador
+  // Adjustment for player's perspective
   return perspective === GOLD
     ? goldScore - silverScore
     : silverScore - goldScore;
 }
 
-// Calcula bonus por control del centro
+// Calculate bonus for center control
 function calculateCenterControlBonus(row: number, col: number): number {
   const centerDistance = Math.max(Math.abs(row - 3.5), Math.abs(col - 3.5));
   return Math.max(0, 4 - centerDistance);
 }
 
-// Verifica si una pieza está atrapada
+// Check if a piece is trapped
 function isPieceTrapped(game: Arimaa, position: [number, number]): boolean {
   const board = game.getBoard();
   const piece = board[position[0]][position[1]];
   if (!piece) return false;
 
   const [row, col] = position;
-  const trappedSquares = [
-    [3, 2],
-    [3, 5],
-    [4, 2],
-    [4, 5],
-  ];
 
-  // Verificar si está en una casilla trampa
-  return trappedSquares.some(
+  // Check if it is on a trap square
+  return TRAP_SQUARES.some(
     ([trapRow, trapCol]) => row === trapRow && col === trapCol
   );
 }
 
-// Calcula bonus por movilidad de piezas
+// Calculate bonus for piece mobility
 function calculateMobilityBonus(game: Arimaa, side: Side): number {
   let mobilityScore = 0;
   const board = game.getBoard();
@@ -118,7 +113,7 @@ function calculateMobilityBonus(game: Arimaa, side: Side): number {
       const piece = board[row][col];
       if (!piece || piece[0] !== side) continue;
 
-      // Contar movimientos potenciales
+      // Count potential moves
       const potentialMoves = countPotentialMoves(game, [row, col]);
       mobilityScore += potentialMoves;
     }
@@ -127,10 +122,10 @@ function calculateMobilityBonus(game: Arimaa, side: Side): number {
   return mobilityScore;
 }
 
-// Cuenta movimientos potenciales para una pieza
+// Count potential moves for a piece
 function countPotentialMoves(game: Arimaa, position: [number, number]): number {
-  // Implementación simplificada de movimientos potenciales
-  // En una implementación real, esto sería más complejo
+  // Simplified implementation of potential moves
+  // In a real implementation, this would be more complex
   const board = game.getBoard();
   const piece = board[position[0]][position[1]];
   if (!piece) return 0;
@@ -147,7 +142,7 @@ function countPotentialMoves(game: Arimaa, position: [number, number]): number {
     const newRow = row + dRow;
     const newCol = col + dCol;
 
-    // Verificaciones básicas de movimiento
+    // Basic movement checks
     return (
       newRow >= 0 &&
       newRow < 8 &&

@@ -56,10 +56,6 @@ export default function App() {
         turnRef.current = turn;
         countTurnStepsCalculatedByBot.current = newMoves.length;
       }
-
-      newMoves.forEach(([from, to]) => {
-        console.log(`Computer move: ${from} -> ${to}`);
-      });
     }
 
     // Update turnRef.current to the current turn
@@ -81,15 +77,16 @@ export default function App() {
 
     return () => clearTimeout(timeoutId);
   }, [game]);
-
+  /*
   const {
     board: boardToDebug,
     handleMakeMove: makeMoveDebug,
     loadBoard: loadBoardToDebug,
+    game: gameToDebug,
   } = useArimaaGame();
 
   useEffect(() => {
-    loadBoardToDebug([
+    const board1 = [
       ["gR", "gR", null, "gR", "gR", "gR", null, null],
       [null, null, "sR", null, null, null, null, "gR"],
       [null, "gH", "gC", "gR", "gH", null, null, "gR"],
@@ -98,12 +95,33 @@ export default function App() {
       [null, null, null, null, null, null, "gD", null],
       [null, null, "gM", null, null, null, null, "sR"],
       ["sE", null, "sD", "sM", "sR", null, "sC", "sH"],
-    ]);
+    ];
+
+    const trappedSilverPiecesBoard = [
+      ["gR", "gR", null, "gR", "gR", "gR", null, null],
+      [null, null, "sR", null, null, null, null, "gR"],
+      [null, "gH", "gC", "gR", "gH", null, null, "gR"],
+      ["gE", null, null, "gC", null, "gD", null, null],
+      ["sC", null, null, null, null, null, null, null],
+      [null, null, null, null, "sR", null, "gD", null],
+      [null, null, "gM", null, null, null, null, null],
+      [null, null, "sD", null, "gD", null, null, null],
+    ];
+
+    loadBoardToDebug(board1 as PieceWithSide[][]);
   }, [loadBoardToDebug]);
 
-  /*  useEffect(() => {
-    console.log(gameToDebug.ascii());
-    getBestMove(gameToDebug, 1);
+  // show alert when the game is over
+  useEffect(() => {
+    if (!gameToDebug.isGameOver()) return;
+
+    const timeoutId = setTimeout(() => {
+      alert(
+        `Game Over - Winner: ${gameToDebug.getWinner()} in ${gameToDebug.getTurn()} turns`
+      );
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
   }, [gameToDebug]);
 */
   return (
@@ -112,7 +130,7 @@ export default function App() {
       <p>Turn: {turn}</p>
       <Board board={board} makeMove={handleMakeMove} />
       <Button onClick={handleGiveUpTurn}>Finish My Turn</Button>
-      <Board board={boardToDebug} makeMove={makeMoveDebug} />
+      {/*<Board board={boardToDebug} makeMove={makeMoveDebug} />*/}
     </main>
   );
 }

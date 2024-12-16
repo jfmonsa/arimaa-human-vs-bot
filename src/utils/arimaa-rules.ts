@@ -12,6 +12,29 @@ export const HORSE = "H" as const;
 export const CAMEL = "M" as const;
 export const ELEPHANT = "E" as const;
 
+export const TRAP_SQUARES: Position[] = [
+  [2, 2], // c3
+  [2, 5], // f3
+  [5, 2], // c6
+  [5, 5], // f6
+];
+
+export const DIRECTIONS: Position[] = [
+  [0, 1], // Right
+  [0, -1], // Left
+  [1, 0], // Down
+  [-1, 0], // Up
+];
+
+export const PIECES_STRENGTH: Record<Piece, number> = {
+  [RABBIT]: 1,
+  [CAT]: 2,
+  [DOG]: 3,
+  [HORSE]: 4,
+  [CAMEL]: 5,
+  [ELEPHANT]: 6,
+};
+
 export type Piece =
   | typeof RABBIT
   | typeof CAT
@@ -24,13 +47,6 @@ export type Side = typeof GOLD | typeof SILVER;
 
 export type PieceWithSide = `${Side}${Piece}` | null;
 
-export const TRAP_SQUARES: Position[] = [
-  [2, 2],
-  [2, 5],
-  [5, 2],
-  [5, 5],
-];
-
 export type Position = [number, number];
 
 export type GoldRank = 1 | 2;
@@ -40,18 +56,17 @@ export type SilverRank = 7 | 8;
 export interface MakeMoveExtraOptions {
   needToPassTurnAfterMoveDone?: boolean;
 }
-// export type Rank = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
-// export type File = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h";
-// export type SquarePosition = `${File}${Rank}`;
 
 export class Arimaa {
   /** Board stores the current state of the game */
   private board: PieceWithSide[][] = genEmptyBoard();
   private turn: Side = GOLD;
+
   /**
    * The number of turns that have been taken in the game.
    */
   private turnCount: number = 1;
+
   /**
    * Stores the steps taken during the current turn.
    *
@@ -59,7 +74,6 @@ export class Arimaa {
    * In Arimaa, a turn consists of up to four steps. Each step is a move of a piece from one position to another.
    * The `steps` array keeps track of these steps for the current turn. Each step is represented as a tuple of
    * two positions: the starting position and the ending position.
-   *
    * Each Player can move up to 4 times in a turn. If a player moves 4 times, the turn musth switch.
    */
   private steps: [number, number][][] = [];
@@ -74,23 +88,33 @@ export class Arimaa {
 
   /**
    * Represents the next square that the current player has to move to during a push or pull action.
-   * @type {[Position,Position] | null} - A tuple of two positions representing the starting and ending positions of the push or pull action.
    */
   private pushPullNextSquareCurrentPlayerHasToMove: Position | null = null;
+
   /**
    * Represents the state of the board before the current turn started.
-   *
    * @remarks
    * This property is necessary to validate that a player does not make a move equivalent to passing the whole turn.
-   * By comparing the current state of the board with this initial state at the end of the turn, we can ensure that
-   * the player has made meaningful moves and not just passed the turn without any actual movement.
    */
   private boardBeforeTurn: PieceWithSide[][] = genEmptyBoard();
 
+  /**
+   * Indicates whether the current move is part of a push or pull sequence.
+   * A push or pull requires two consecutive steps within the same turn.
+   * This property helps track if the first step of a push or pull has been made.
+   */
   private isCurrentMoveAPushOrPull = false;
-  private hasAPushOrPullBeenMadeInPreviousTurn = false;
 
-  // TODO: should we use a constructor to initialize and check the two forms of initialization of the board: loadBoard and initializeBoard?
+  /**
+   * Indicates whether a push or pull move has been made in the previous turn.
+   * This property helps enforce the rule that a push or pull must be completed
+   * within the same turn and cannot be carried over to the next turn.
+   */
+  private hasPushOrPullBeenMadeInTheTurn = false;
+
+  private wasPreviousStepTheFirstPartOfAPull = false;
+
+  /** Loads the given board configuration into the current Arimaa game instance. */
   public loadBoard(board: PieceWithSide[][]): Arimaa {
     this.board = board;
     return this;
@@ -98,10 +122,8 @@ export class Arimaa {
 
   /** place gold and silver pieces on the board for the initial setup */
   public setup(goldSetup: Piece[], silverSetup: Piece[]): Arimaa {
-    this.placePieces(this.board, GOLD, goldSetup, 1, 2);
-    this.placePieces(this.boardBeforeTurn, GOLD, goldSetup, 1, 2);
-    this.placePieces(this.board, SILVER, silverSetup, 7, 8);
-    this.placePieces(this.boardBeforeTurn, SILVER, silverSetup, 7, 8);
+    this.placePieces(GOLD, goldSetup, 1, 2);
+    this.placePieces(SILVER, silverSetup, 7, 8);
     return this;
   }
 
@@ -109,12 +131,9 @@ export class Arimaa {
    * Places pieces on the board for a given player according to the provided setup.
    *
    * @remarks
-   * This function modifies the board by placing the pieces for the specified player
-   * in the given rows. The setup array should contain the pieces in the order they
-   * should be placed on the board.
+   * The setup array should contain the pieces in the order they should be placed on the board.
    */
   private placePieces(
-    board: PieceWithSide[][],
     player: Side,
     setup: Piece[],
     row1: GoldRank | SilverRank,
@@ -125,7 +144,9 @@ export class Arimaa {
 
     rows.forEach((row) => {
       for (let col = 1; col <= 8; col++) {
-        board[row - 1][col - 1] = `${player}${setup[index]}`;
+        const position: Position = [row - 1, col - 1];
+        const piece: PieceWithSide = `${player}${setup[index]}`;
+        this.putPiece(position, piece);
         index++;
       }
     });
@@ -137,18 +158,6 @@ export class Arimaa {
     to: Position,
     extraOptions?: MakeMoveExtraOptions
   ): boolean {
-    console.log(
-      "makeMove",
-      JSON.stringify([from, to]),
-      "turn:",
-      this.turn,
-      "piece:",
-      this.getPiece(from),
-      "steps:",
-      this.steps.length,
-      "turn number:",
-      this.turnCount
-    );
     if (!this.validateMove(from, to)) return false;
 
     this.movePiece(from, to, this.getPiece(from));
@@ -206,58 +215,66 @@ export class Arimaa {
     // Only orthogonal moves allowed and must be one square away
     if (dx + dy !== 1) return false;
 
-    // Check if:
-    // A player may push or pull the opponent's rabbit into the goal
-    // row it is trying to reach. If at the end of the turn the rabbit remains there,
-    // the player loses. However if the opponent's rabbit is moved back out of the goal
-    if (this.steps.length === 0 && this.hasAPushOrPullBeenMadeInPreviousTurn) {
-      this.hasAPushOrPullBeenMadeInPreviousTurn = false;
-      if (this.isGameOver()) return false;
-    }
+    /*console.log(
+      "makeMove",
+      JSON.stringify([from, to]),
+      "turn:",
+      this.turn,
+      "piece:",
+      this.getPiece(from),
+      "steps:",
+      this.steps.length,
+      "turn number:",
+      this.turnCount
+    );*/
 
-    let prevMoveWasAPull = false;
     // Check if previous move was a push or pull
     // Check if there are pieces that the current player must move due to a previous push or pull
     if (this.pushPullPossiblePiecesCurentPlayerHasToMove.length > 0) {
       // Ensure the square being moved to is one of the required squares
 
-      console.log("validating push / pull");
-      const fromHasToMove = this.pushPullNextSquareCurrentPlayerHasToMove;
-      if (!fromHasToMove) return false;
-
-      // new move to square must be the same as the previous move from square of the pushed piece
-      if (!isSamePosition(to, fromHasToMove)) return false;
-
-      const isCurrentPieceNotARequired =
-        !this.pushPullPossiblePiecesCurentPlayerHasToMove.some((pos) =>
-          isSamePosition(pos, from)
-        );
       // Ensure the piece being moved is one of the required pieces
-      if (isCurrentPieceNotARequired) {
-        return false;
-      } else {
-        // If the clean the list of pieces that must be moved
-        this.pushPullPossiblePiecesCurentPlayerHasToMove = [];
-        this.pushPullNextSquareCurrentPlayerHasToMove = null;
-        if (this.turn !== this.getSide(piece)) {
-          prevMoveWasAPull = true;
-        }
+      // -> is only required to move one of the pieces stored at pushPullPossiblePiecesCurentPlayerHasToMove
+      //    if the previous move was a push
+      if (!this.wasPreviousStepTheFirstPartOfAPull) {
+        const fromHasToMove = this.pushPullNextSquareCurrentPlayerHasToMove;
+        if (!fromHasToMove) return false;
+
+        // new move to square must be the same as the previous move from square of the pushed piece
+        if (!isSamePosition(to, fromHasToMove)) return false;
+
+        const isCurrentPieceNotARequired =
+          !this.pushPullPossiblePiecesCurentPlayerHasToMove.some((pos) =>
+            isSamePosition(pos, from)
+          );
+        if (isCurrentPieceNotARequired) return false;
       }
+      // clean if the push /pull was successful
+      // If the clean the list of pieces that must be moved
+      this.pushPullPossiblePiecesCurentPlayerHasToMove = [];
+      this.pushPullNextSquareCurrentPlayerHasToMove = null;
     }
+
     // Check if the piece belongs to the current player
     if (this.getSide(piece) === this.turn) {
       // Check if the piece is frozen
-      if (this.isPieceFrozen(from)) {
-        return false;
-      }
+      if (this.isPieceFrozen(from)) return false;
+
       this.checkIfIsPull(from, to); // don't return false because even if is not a pull move, is a valid move
     } else {
       // Check if it's a valid push move
       const pushValidation = this.checkIfIsPush(from, to);
-      if (!prevMoveWasAPull && !pushValidation) {
-        console.log("Not a valid push move", !prevMoveWasAPull, pushValidation);
+      if (!this.wasPreviousStepTheFirstPartOfAPull && !pushValidation) {
+        console.log(
+          "Not a valid push move",
+          !this.wasPreviousStepTheFirstPartOfAPull,
+          pushValidation
+        );
         return false;
       }
+      // Only the second part of a pull would reach this point
+      // -> update flag to false after the second part of a pull move is made
+      this.wasPreviousStepTheFirstPartOfAPull = false;
     }
 
     // Check: A player may no make a move equivalent to passsing the whole turn without moving
@@ -280,24 +297,16 @@ export class Arimaa {
       return false;
     }
 
-    console.log("hola");
-    console.log("sequence", JSON.stringify([...this.steps, [from, to]]));
+    if (this.isGameOver()) return false;
 
-    // Check if:
-    // A player may push or pull the opponent's rabbit into the goal
-    // row it is trying to reach. If at the end of the turn the rabbit remains there,
-    // the player loses. However if the opponent's rabbit is moved back out of the goal
-    // row before the end of the turn, the player does not lose.
-    if (
-      this.isCurrentMoveAPushOrPull &&
-      this.pushPullPossiblePiecesCurentPlayerHasToMove.length === 0
-    ) {
-      // Clean isCurrentMoveAPushOrPull flag when the second part of a push or pull move is made (push / pull move completed)
-      this.hasAPushOrPullBeenMadeInPreviousTurn = true;
+    // store this flag to validate the special case of rabbit reaching the goal
+    // row in the middle of a turn where push / pull moves are made
+    if (this.isCurrentMoveAPushOrPull) {
+      this.hasPushOrPullBeenMadeInTheTurn = true;
     }
 
-    if (!this.hasAPushOrPullBeenMadeInPreviousTurn && this.isGameOver())
-      return false;
+    // Update this flag to false after the second part of a push or pull move is made
+    this.isCurrentMoveAPushOrPull = false;
     return true;
   }
 
@@ -353,14 +362,13 @@ export class Arimaa {
     this.pushPullPossiblePiecesCurentPlayerHasToMove = weakerAdjacentEnemies;
     this.pushPullNextSquareCurrentPlayerHasToMove = from;
     this.isCurrentMoveAPushOrPull = true;
+    this.wasPreviousStepTheFirstPartOfAPull = true;
     console.log("Is a pull move" + this.getPiece(from), "move:", [from, to]);
     return true;
   }
 
   /**
    * Checks if a piece is frozen.
-   * @param position - The position of the piece to check.
-   * @returns `true` if the piece is frozen, `false` otherwise.
    */
   private isPieceFrozen(position: Position): boolean {
     const piece = this.getPiece(position);
@@ -378,7 +386,7 @@ export class Arimaa {
 
     if (hasFriendlyNeighbor) return false;
 
-    // Check if there is a stronger enemy neighbor
+    // Check if there is a stronger enemy neighbor than the current piece
     const isFrozen = neighbors.some(
       (neighbor) =>
         this.checkIfPositionIsInBoard(neighbor) &&
@@ -484,18 +492,7 @@ export class Arimaa {
 
     return weakerNeighbors;
   }
-
-  /**
-   * Returns the neighboring positions of a given position on the board.
-   */
-  private getNeighbors([x, y]: Position): Position[] {
-    return [
-      [x - 1, y], // up
-      [x + 1, y], // down
-      [x, y - 1], // Left
-      [x, y + 1], // Right
-    ];
-  }
+  // TODO: avoid repetition of code in getStrongerNeighbors and getWeakerNeighbouringEnemies methods
   // TODO: change notation to algebraic or i,j (matrix notation) because x,y is confusing since we aren't using a cartesian plane
 
   /**
@@ -506,34 +503,81 @@ export class Arimaa {
    * 1. If a rabbit of the gold player ("gR") has reached the opposing goal row (row 7).
    * 2. If a rabbit of the silver player ("sR") has reached the opposing goal row (row 0).
    * 3. If either side has no rabbits left on the board.
-   *
-   * Future win conditions such as freezing all pieces or repetition rules are not yet implemented.
+   * 4. If all pieces of the current player are frozen or blocked.
    *
    * @returns {boolean} - Returns `true` if any victory condition is met, otherwise `false`.
    */
   public isGameOver(): boolean {
     // 1. Check if a rabbit reached the opposing goal row
-    const goldWins = this.board[7].some((cell) => cell === "gR");
-    const silverWins = this.board[0].some((cell) => cell === "sR");
+    const hasRabbitReachedGoal = (row: number, rabbit: string): boolean => {
+      return this.board[row].some((cell) => cell === rabbit);
+    };
 
-    if (goldWins || silverWins) return true;
+    // Check if:
+    // A player may push or pull the opponent's rabbit into the goal
+    // row it is trying to reach. If at the end of the turn the rabbit remains there,
+    // the player loses. However if the opponent's rabbit is moved back out of the goal
+    const isInTheMiddleOfAPushOrPull =
+      this.isCurrentMoveAPushOrPull || this.hasPushOrPullBeenMadeInTheTurn;
 
-    // 2. Check if either side has no rabbits left
-    const goldHasRabbits = this.board.flat().some((cell) => cell === "gR");
-    const silverHasRabbits = this.board.flat().some((cell) => cell === "sR");
+    if (!isInTheMiddleOfAPushOrPull) {
+      const goldWins = hasRabbitReachedGoal(7, "gR");
+      const silverWins = hasRabbitReachedGoal(0, "sR");
+      if (goldWins || silverWins) return true;
+    }
 
-    if (!goldHasRabbits || !silverHasRabbits) return true;
+    // 3. Check if all pieces of the current player are frozen or blocked
+    if (this.areAllPiecesFrozenOrBlocked(this.turn)) return true;
+
     return false;
   }
 
   /**
-   * Determines the winner of the game.
+   * Checks if all pieces of the given side are either frozen or blocked.
+   */
+  private areAllPiecesFrozenOrBlocked(side: Side): boolean {
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const piece = this.getPiece([row, col]);
+        if (!piece || this.getSide(piece) !== side) continue;
+        if (
+          !this.isPieceFrozen([row, col]) &&
+          this.countPotentialMoves([row, col]) > 0
+        ) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Counts the number of potential moves from a given position.
    *
+   * This method calculates the number of valid moves that can be made from the specified position
+   * on the board. A move is considered valid if it stays within the boundaries of the board and
+   * the target position is empty (i.e., does not contain a piece).
+   */
+  private countPotentialMoves(position: Position): number {
+    const [row, col] = position;
+
+    return DIRECTIONS.filter(([dRow, dCol]) => {
+      const newRow = row + dRow;
+      const newCol = col + dCol;
+
+      return (
+        this.checkIfPositionIsInBoard([newRow, newCol]) &&
+        !this.getPiece([newRow, newCol])
+      );
+    }).length;
+  }
+
+  /**
+   * Determines the winner of the game.
    * @returns {Side | null} The winning side (GOLD or SILVER) if the game is over, otherwise null.
    */
   public getWinner(): Side | null {
     if (!this.isGameOver()) return null;
-
     return this.turn === GOLD ? SILVER : GOLD;
   }
 
@@ -541,8 +585,6 @@ export class Arimaa {
    * Ends the current player's turn and switches to the other player.
    */
   public giveUpTurn(): void {
-    // TODO: wasBot is a workaround for the bot, fix this
-
     if (this.steps.length === 0) {
       throw new Error("Cannot pass the entire turn without moving.");
     }
@@ -563,6 +605,14 @@ export class Arimaa {
       );
     }
 
+    // if turn has finished, then reset the flag
+    if (
+      this.hasPushOrPullBeenMadeInTheTurn &&
+      this.pushPullPossiblePiecesCurentPlayerHasToMove.length === 0
+    ) {
+      this.hasPushOrPullBeenMadeInTheTurn = false;
+    }
+
     // Switch turn
     this.switchTurn();
     this.steps = []; // Reset steps
@@ -570,24 +620,8 @@ export class Arimaa {
     this.turnCount++;
   }
 
-  private isBoardEqualToCurrent(board: PieceWithSide[][]): boolean {
-    return JSON.stringify(this.board) === JSON.stringify(board);
-  }
-
   public switchTurn(): void {
     this.turn = this.turn === GOLD ? SILVER : GOLD;
-  }
-
-  private getPieceStrength(piece: Piece): number {
-    const strenghtLookup = {
-      [RABBIT]: 1,
-      [CAT]: 2,
-      [DOG]: 3,
-      [HORSE]: 4,
-      [CAMEL]: 5,
-      [ELEPHANT]: 6,
-    };
-    return strenghtLookup[piece];
   }
 
   /**
@@ -609,8 +643,9 @@ export class Arimaa {
       : null;
     clone.boardBeforeTurn = this.boardBeforeTurn.map((row) => [...row]);
     clone.isCurrentMoveAPushOrPull = this.isCurrentMoveAPushOrPull;
-    clone.hasAPushOrPullBeenMadeInPreviousTurn =
-      this.hasAPushOrPullBeenMadeInPreviousTurn;
+    clone.hasPushOrPullBeenMadeInTheTurn = this.hasPushOrPullBeenMadeInTheTurn;
+    clone.wasPreviousStepTheFirstPartOfAPull =
+      this.wasPreviousStepTheFirstPartOfAPull;
     return clone;
   }
 
@@ -685,11 +720,6 @@ export class Arimaa {
     }
   }
 
-  private checkIfPositionIsInBoard(position: Position): boolean {
-    const [x, y] = position;
-    return x >= 0 && x < 8 && y >= 0 && y < 8;
-  }
-
   /**
    * Places a piece on the board at the specified position.
    */
@@ -720,6 +750,10 @@ export class Arimaa {
     return piece ? (piece[1] as Piece) : null;
   }
 
+  public getPieceStrength(piece: Piece): number {
+    return PIECES_STRENGTH[piece];
+  }
+
   /**
    * print board for debugging purpouses
    */
@@ -745,5 +779,21 @@ export class Arimaa {
 
   public getTurnCount(): number {
     return this.turnCount;
+  }
+
+  private checkIfPositionIsInBoard(position: Position): boolean {
+    const [x, y] = position;
+    return x >= 0 && x < 8 && y >= 0 && y < 8;
+  }
+
+  private isBoardEqualToCurrent(board: PieceWithSide[][]): boolean {
+    return JSON.stringify(this.board) === JSON.stringify(board);
+  }
+
+  /**
+   * Returns the neighboring positions of a given position on the board.
+   */
+  private getNeighbors([x, y]: Position): Position[] {
+    return DIRECTIONS.map(([dx, dy]) => [x + dx, y + dy]);
   }
 }

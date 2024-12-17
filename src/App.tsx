@@ -47,23 +47,30 @@ export default function App() {
       return () => clearTimeout(timeoutId);
     }
 
+    let timeoutCalculationBestMove: number;
     // Only generate moves if it's the computer's turn and the turn has changed
     if (turn === SILVER && turn !== turnRef.current) {
       console.log("Calculating bot's turn...");
-      const newMoves = getBestMove(game, 1); // Depth 1 for now
 
-      if (newMoves.length > 0) {
-        setMovesToExecute(newMoves);
-        turnRef.current = turn;
-        countTurnStepsCalculatedByBot.current = newMoves.length;
-      }
+      timeoutCalculationBestMove = setTimeout(() => {
+        const newMoves = getBestMove(game, 1); // Depth 1 for now
+
+        if (newMoves.length > 0) {
+          setMovesToExecute(newMoves);
+          turnRef.current = turn;
+          countTurnStepsCalculatedByBot.current = newMoves.length;
+        }
+      }, 10);
     }
 
     // Update turnRef.current to the current turn
     turnRef.current = turn;
 
     // timeout cleanup
-    return () => clearTimeout(timeoutId);
+    return () => {
+      clearTimeout(timeoutId);
+      clearTimeout(timeoutCalculationBestMove);
+    };
   }, [turn, game, movesToExecute.length, processNextMove, handleGiveUpTurn]);
 
   // show alert when the game is over
@@ -79,50 +86,26 @@ export default function App() {
     return () => clearTimeout(timeoutId);
   }, [game]);
 
-  /*const {
-    board: boardToDebug,
-    handleMakeMove: makeMoveDebug,
-    loadBoard: loadBoardToDebug,
-    game: gameToDebug,
-  } = useArimaaGame();
+  // const {
+  //   board: boardToDebug,
+  //   handleMakeMove: makeMoveDebug,
+  //   loadBoard: loadBoardToDebug,
+  // } = useArimaaGame();
 
-  useEffect(() => {
-    const board1 = [
-      ["gR", "gR", null, "gR", "gR", "gR", null, null],
-      [null, null, "sR", null, null, null, null, "gR"],
-      [null, "gH", "gC", "gR", "gH", null, null, "gR"],
-      ["gE", null, null, "gC", null, "gD", null, null],
-      ["sC", null, null, null, null, null, null, null],
-      [null, null, null, null, null, null, "gD", null],
-      [null, null, "gM", null, null, null, null, "sR"],
-      ["sE", null, "sD", "sM", "sR", null, "sC", "sH"],
-    ];
+  // useEffect(() => {
+  //   const board1 = [
+  //     ["gR", "gR", null, "gR", "gR", "gR", null, null],
+  //     [null, null, "sR", null, null, null, null, "gR"],
+  //     [null, "gH", "gC", "gR", "gH", null, null, "gR"],
+  //     ["gE", null, null, "gC", null, "gD", null, null],
+  //     ["sC", null, null, null, null, null, null, null],
+  //     [null, null, null, null, null, null, "gD", null],
+  //     [null, null, "gM", null, null, null, null, "sR"],
+  //     ["sE", null, "sD", "sM", "sR", null, "sC", "sH"],
+  //   ];
 
-    const trappedSilverPiecesBoard = [
-      ["gR", "gR", null, "gR", "gR", "gR", null, null],
-      [null, null, "sR", null, null, null, null, "gR"],
-      [null, "gH", "gC", "gR", "gH", null, null, "gR"],
-      ["gE", null, null, "gC", null, "gD", null, null],
-      ["sC", null, null, null, null, null, null, null],
-      [null, null, null, null, "sR", null, "gD", null],
-      [null, null, "gM", null, null, null, null, null],
-      [null, null, "sD", null, "gD", null, null, null],
-    ];
-
-    const captureLastSilverRabitBoard = [
-      ["gR", "gR", "gC", "gR", "gR", "gR", null, null],
-      [null, null, "sR", null, null, null, null, "gR"],
-      [null, "gH", null, "gR", "gH", null, null, "gR"],
-      ["gE", null, null, "gC", null, "gD", null, null],
-      ["sC", null, null, null, null, null, null, null],
-      [null, null, null, null, null, null, "gD", null],
-      [null, null, "gM", null, null, null, null, null],
-      ["sE", null, "sD", "sM", null, null, "sC", null],
-    ];
-
-    loadBoardToDebug(captureLastSilverRabitBoard as PieceWithSide[][]);
-  }, [loadBoardToDebug]);
-  }, [gameToDebug]);*/
+  //   loadBoardToDebug(board as PieceWithSide[][]);
+  // }, [loadBoardToDebug]);
 
   return (
     <main>

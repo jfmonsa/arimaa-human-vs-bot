@@ -104,7 +104,7 @@ export function evaluateBoard(game: Arimaa, perspective: Side): number {
 
   // Penalize material difference
   const materialDifference = goldScore - silverScore;
-  const materialPenalty = Math.abs(materialDifference) * 0.7;
+  const materialPenalty = Math.abs(materialDifference) * -2;
   if (materialDifference > 0) {
     silverScore += materialPenalty;
   } else {

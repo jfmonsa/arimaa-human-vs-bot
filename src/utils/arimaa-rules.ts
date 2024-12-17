@@ -255,6 +255,7 @@ export class Arimaa {
 
       if (!playerIntentionWasNotToPull) {
         const fromHasToMove = this.pushPullNextSquareCurrentPlayerHasToMove;
+        console.log("hola");
         if (!fromHasToMove) return false;
 
         // new move to square must be the same as the previous move from square of the pushed piece
@@ -344,7 +345,7 @@ export class Arimaa {
       return false;
     }
     // store data to validate the second part (2nd step) of a push move
-    this.pushPullPossiblePiecesCurentPlayerHasToMove = strongerNeighbors;
+    this.pushPullPossiblePiecesCurentPlayerHasToMove = [...strongerNeighbors];
     this.pushPullNextSquareCurrentPlayerHasToMove = from;
     this.isCurrentMoveAPushOrPull = true;
     //console.log("Is a push move" + this.getPiece(from), "move:", [from, to]);
@@ -370,7 +371,9 @@ export class Arimaa {
       return false;
     }
     // store data to validate the second part (2nd step) of a pull move
-    this.pushPullPossiblePiecesCurentPlayerHasToMove = weakerAdjacentEnemies;
+    this.pushPullPossiblePiecesCurentPlayerHasToMove = [
+      ...weakerAdjacentEnemies,
+    ];
     this.pushPullNextSquareCurrentPlayerHasToMove = from;
     this.isCurrentMoveAPushOrPull = true;
     this.wasPreviousStepTheFirstPartOfAPull = true;

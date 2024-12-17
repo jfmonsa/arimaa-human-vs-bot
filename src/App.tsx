@@ -72,7 +72,7 @@ export default function App() {
 
     const timeoutId = setTimeout(() => {
       alert(
-        `Game Over - Winner: ${game.getWinner()} in ${game.getTurn()} turns`
+        `Game Over - Winner: ${game.getWinner()} in ${game.getTurnCount()} turns`
       );
     }, 500);
 

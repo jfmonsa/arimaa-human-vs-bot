@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   PieceWithSide,
   GOLD,
@@ -85,6 +85,15 @@ export function Board({
       }
     }
   };
+
+  useEffect(() => {
+    if (!squareSelected) return;
+    const timeoutId = setTimeout(() => {
+      setSquareSelected(null);
+    }, 30000);
+
+    return () => clearTimeout(timeoutId);
+  }, [squareSelected]);
 
   const renderCell = (
     cell: PieceWithSide | null,

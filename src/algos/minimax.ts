@@ -1,4 +1,4 @@
-import { Arimaa, Position } from "../utils/arimaa-rules";
+import { Arimaa, Position, SILVER } from "../utils/arimaa-rules";
 import { evaluateBoard, transpositionTable } from "./position-evaluation";
 
 /**
@@ -16,12 +16,11 @@ export function minimax(
   beta: number = Infinity
 ): { score: number; moves: [Position, Position][] } {
   if (depth === 0 || game.isGameOver()) {
-    // TODO: pass side dynamically
     console.log(
       "Nodes (Boards) stored in transposition table",
       transpositionTable.size
     );
-    return { score: evaluateBoard(game, "g"), moves: [] };
+    return { score: evaluateBoard(game, SILVER), moves: [] };
   }
   const legalMoves = game.generateLegalMoves();
   console.log(`minimax: Nodes ${legalMoves.length} in depth = ${depth}`);

@@ -249,7 +249,11 @@ export class Arimaa {
       // Ensure the piece being moved is one of the required pieces
       // -> is only required to move one of the pieces stored at pushPullPossiblePiecesCurentPlayerHasToMove
       //    if the previous move was a push
-      if (!this.wasPreviousStepTheFirstPartOfAPull) {
+      const playerIntentionWasNotToPull =
+        this.wasPreviousStepTheFirstPartOfAPull &&
+        this.getSide(piece) === this.turn;
+
+      if (!playerIntentionWasNotToPull) {
         const fromHasToMove = this.pushPullNextSquareCurrentPlayerHasToMove;
         if (!fromHasToMove) return false;
 
@@ -790,7 +794,7 @@ export class Arimaa {
     return this.turnCount;
   }
 
-  private checkIfPositionIsInBoard(position: Position): boolean {
+  public checkIfPositionIsInBoard(position: Position): boolean {
     const [x, y] = position;
     return x >= 0 && x < 8 && y >= 0 && y < 8;
   }

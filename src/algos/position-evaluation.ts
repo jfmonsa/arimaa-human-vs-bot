@@ -14,17 +14,21 @@ import {
   TRAP_SQUARES,
 } from "../utils/arimaa-rules";
 
-// Piece values for evaluation
+/** The values assigned to each piece type for evaluation purposes. */
 const PIECE_VALUES: Record<string, number> = {
-  [RABBIT]: 1, // Rabbits are the most valuable strategically
-  [CAT]: 3,
-  [DOG]: 4,
-  [HORSE]: 5,
-  [CAMEL]: 7,
-  [ELEPHANT]: 10, // Elephants are the strongest
+  [RABBIT]: 4,
+  [CAT]: 8,
+  [DOG]: 10,
+  [HORSE]: 14,
+  [CAMEL]: 18,
+  [ELEPHANT]: 24,
 };
 
-// Transposition table for storing evaluated positions, to avoid re-evaluation
+/**
+ * A transposition table to store previously evaluated positions in the game.
+ * The table uses a Map where the keys are string representations of game positions
+ * and the values are the evaluation scores of those positions.
+ */
 export const transpositionTable = new Map<string, number>();
 
 let transpositionTableHits = 0;
@@ -45,28 +49,33 @@ export function evaluateBoard(game: Arimaa, perspective: Side): number {
     return transpositionTable.get(boardHash)!;
   }
 
-  let goldScore = 0;
-  let silverScore = 0;
+  // intialize scores
+  // Eval material
+  let goldScore = calculateHarLogMaterial(game, GOLD);
+  let silverScore = calculateHarLogMaterial(game, SILVER);
 
   // Evaluate pieces and positions
   for (let row = 0; row < 8; row++) {
     for (let col = 0; col < 8; col++) {
-      const piece = board[row][col];
+      const piece = game.getPiece([row, col]);
       if (!piece) continue;
 
-      const [side, type] = [piece[0], piece[1]] as [Side, string];
-      const pieceValue = PIECE_VALUES[type];
+      const pieceSide = game.getSide(piece);
+      const pieceType = game.getPieceType(piece);
+
+      if (pieceType === null) continue;
+      const pieceValue = PIECE_VALUES[pieceType];
 
       // Base value of the piece
-      if (side === GOLD) {
+      if (pieceSide === GOLD) {
         goldScore += pieceValue;
       } else {
         silverScore += pieceValue;
       }
 
       // Bonus for rabbits near their goal
-      if (type === RABBIT) {
-        if (side === GOLD) {
+      if (pieceType === RABBIT) {
+        if (pieceSide === GOLD) {
           // Bonus for approaching the top rows
           goldScore += (7 - row) * 2;
         } else {
@@ -77,19 +86,10 @@ export function evaluateBoard(game: Arimaa, perspective: Side): number {
 
       // Bonus for center control
       const centerBonus = calculateCenterControlBonus(row, col);
-      if (side === GOLD) {
+      if (pieceSide === GOLD) {
         goldScore += centerBonus;
       } else {
         silverScore += centerBonus;
-      }
-
-      // Penalty for trapped pieces
-      if (isPieceTrapped(game, [row, col])) {
-        if (side === GOLD) {
-          goldScore -= pieceValue / 2;
-        } else {
-          silverScore -= pieceValue / 2;
-        }
       }
     }
   }
@@ -97,6 +97,19 @@ export function evaluateBoard(game: Arimaa, perspective: Side): number {
   // Bonus for piece mobility
   goldScore += calculateMobilityBonus(game, GOLD);
   silverScore += calculateMobilityBonus(game, SILVER);
+
+  // Bonus for trap control
+  goldScore += calculateTrapControl(game, GOLD);
+  silverScore += calculateTrapControl(game, SILVER);
+
+  // Penalize material difference
+  const materialDifference = goldScore - silverScore;
+  const materialPenalty = Math.abs(materialDifference) * 0.7;
+  if (materialDifference > 0) {
+    silverScore += materialPenalty;
+  } else {
+    goldScore += materialPenalty;
+  }
 
   // Adjustment for player's perspective
   const score =
@@ -114,29 +127,17 @@ function calculateCenterControlBonus(row: number, col: number): number {
   return Math.max(0, 4 - centerDistance);
 }
 
-// Check if a piece is trapped
-function isPieceTrapped(game: Arimaa, position: [number, number]): boolean {
-  const board = game.getBoard();
-  const piece = board[position[0]][position[1]];
-  if (!piece) return false;
-
-  const [row, col] = position;
-
-  // Check if it is on a trap square
-  return TRAP_SQUARES.some(
-    ([trapRow, trapCol]) => row === trapRow && col === trapCol
-  );
-}
-
-// Calculate bonus for piece mobility
+/**
+ * Calculates the mobility bonus for a given side in the Arimaa game.
+ * The mobility bonus is determined by counting the potential moves for each piece of the given side.
+ */
 function calculateMobilityBonus(game: Arimaa, side: Side): number {
   let mobilityScore = 0;
-  const board = game.getBoard();
 
   for (let row = 0; row < 8; row++) {
     for (let col = 0; col < 8; col++) {
-      const piece = board[row][col];
-      if (!piece || piece[0] !== side) continue;
+      const piece = game.getPiece([row, col]);
+      if (!piece || game.getSide(piece) !== side) continue;
 
       // Count potential moves
       const potentialMoves = countPotentialMoves(game, [row, col]);
@@ -147,12 +148,11 @@ function calculateMobilityBonus(game: Arimaa, side: Side): number {
   return mobilityScore;
 }
 
-// Count potential moves for a piece
+/**
+ * Counts the number of potential moves for a piece at a given position in the Arimaa game.
+ */
 function countPotentialMoves(game: Arimaa, position: [number, number]): number {
-  // Simplified implementation of potential moves
-  // In a real implementation, this would be more complex
-  const board = game.getBoard();
-  const piece = board[position[0]][position[1]];
+  const piece = game.getPiece(position);
   if (!piece) return 0;
 
   const [row, col] = position;
@@ -163,11 +163,82 @@ function countPotentialMoves(game: Arimaa, position: [number, number]): number {
 
     // Basic movement checks
     return (
-      newRow >= 0 &&
-      newRow < 8 &&
-      newCol >= 0 &&
-      newCol < 8 &&
-      board[newRow][newCol] === null
+      game.checkIfPositionIsInBoard([newRow, newCol]) &&
+      game.getPiece([newRow, newCol]) === null
     );
   }).length;
+}
+
+/**
+ * Calculates the HarLog material value for a given side in an Arimaa game.
+ *
+ * The HarLog material value is a heuristic used to evaluate the material strength
+ * of a player's position, taking into account the number of rabbits and non-rabbits,
+ * as well as the presence of stronger opponent pieces.
+ *
+ * @see https://icosahedral.net/downloads/djwu2015arimaa.pdf (page 15)
+ */
+function calculateHarLogMaterial(game: Arimaa, side: Side): number {
+  const G = 0.6314442034;
+  const Q = 1.447530126;
+  const pieces = game
+    .getBoard()
+    .flat()
+    .filter((piece) => piece && game.getSide(piece) === side);
+  const rabbits = pieces.filter(
+    (piece) => game.getPieceType(piece) === RABBIT
+  ).length;
+  const nonRabbits = pieces.filter(
+    (piece) => game.getPieceType(piece) !== RABBIT
+  ).length;
+
+  let harLog = G * Math.log((rabbits * nonRabbits) / (rabbits * nonRabbits));
+
+  for (const piece of pieces) {
+    if (game.getPieceType(piece) !== RABBIT) {
+      const strongerOpponents = game
+        .getBoard()
+        .flat()
+        .filter(
+          (opponent) =>
+            opponent &&
+            game.getSide(opponent) !== side &&
+            game.getPieceStrength(game.getPieceType(opponent)!) >
+              game.getPieceStrength(game.getPieceType(piece)!)
+        ).length;
+      const Cp = strongerOpponents === 0 ? 1 : 0;
+      harLog += (1 + Cp) / (Q + strongerOpponents);
+    }
+  }
+
+  return harLog;
+}
+
+/**
+ * Calculates the control score of the traps for a given side in an Arimaa game.
+ * The control score is determined by the proximity and strength of the pieces
+ * of the given side around each trap square.
+ */
+function calculateTrapControl(game: Arimaa, side: Side): number {
+  let trapControlScore = 0;
+
+  for (const [trapRow, trapCol] of TRAP_SQUARES) {
+    let localControl = 0;
+
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const piece = game.getPiece([row, col]);
+        if (!piece || game.getSide(piece) !== side) continue;
+
+        const distance = Math.abs(row - trapRow) + Math.abs(col - trapCol);
+        const strengthFactor = game.getPieceStrength(game.getPieceType(piece)!);
+
+        localControl += strengthFactor / (distance + 1);
+      }
+    }
+
+    trapControlScore += 1 / (1 + Math.exp(-localControl));
+  }
+
+  return trapControlScore;
 }

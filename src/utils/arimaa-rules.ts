@@ -595,7 +595,7 @@ export class Arimaa {
    * on the board. A move is considered valid if it stays within the boundaries of the board and
    * the target position is empty (i.e., does not contain a piece).
    */
-  private countPotentialMoves(position: Position): number {
+  public countPotentialMoves(position: Position): number {
     const [row, col] = position;
 
     return DIRECTIONS.filter(([dRow, dCol]) => {

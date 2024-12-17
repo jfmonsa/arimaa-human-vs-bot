@@ -2,7 +2,6 @@ import {
   Arimaa,
   CAMEL,
   CAT,
-  DIRECTIONS,
   DOG,
   ELEPHANT,
   GOLD,
@@ -102,9 +101,17 @@ export function evaluateBoard(game: Arimaa, perspective: Side): number {
   goldScore += calculateTrapControl(game, GOLD);
   silverScore += calculateTrapControl(game, SILVER);
 
-  // Penalize material difference
+  // Penalize material difference to balance the game
+  // Calculate the difference in material between gold and silver
   const materialDifference = goldScore - silverScore;
+
+  // Calculate the penalty based on the absolute value of the material difference
+  // The penalty is negative to reduce the score of the player with more material
   const materialPenalty = Math.abs(materialDifference) * -2;
+
+  // Apply the penalty to the player with more material
+  // If gold has more material, penalize silver's score
+  // If silver has more material or they are equal, penalize gold's score
   if (materialDifference > 0) {
     silverScore += materialPenalty;
   } else {
@@ -140,33 +147,12 @@ function calculateMobilityBonus(game: Arimaa, side: Side): number {
       if (!piece || game.getSide(piece) !== side) continue;
 
       // Count potential moves
-      const potentialMoves = countPotentialMoves(game, [row, col]);
+      const potentialMoves = game.countPotentialMoves([row, col]);
       mobilityScore += potentialMoves;
     }
   }
 
   return mobilityScore;
-}
-
-/**
- * Counts the number of potential moves for a piece at a given position in the Arimaa game.
- */
-function countPotentialMoves(game: Arimaa, position: [number, number]): number {
-  const piece = game.getPiece(position);
-  if (!piece) return 0;
-
-  const [row, col] = position;
-
-  return DIRECTIONS.filter(([dRow, dCol]) => {
-    const newRow = row + dRow;
-    const newCol = col + dCol;
-
-    // Basic movement checks
-    return (
-      game.checkIfPositionIsInBoard([newRow, newCol]) &&
-      game.getPiece([newRow, newCol]) === null
-    );
-  }).length;
 }
 
 /**
@@ -218,6 +204,19 @@ function calculateHarLogMaterial(game: Arimaa, side: Side): number {
  * Calculates the control score of the traps for a given side in an Arimaa game.
  * The control score is determined by the proximity and strength of the pieces
  * of the given side around each trap square.
+ *
+ * The concept of local control refers to the influence that a player's pieces
+ * have over a specific trap. This influence is calculated based on two main factors:
+ * 1. Proximity: The distance of the pieces to the trap. Pieces that are closer
+ *    to the trap have a greater impact on the control of the trap.
+ * 2. Strength of the pieces: The relative strength of the pieces. Stronger pieces
+ *    have a greater impact on the control of the trap.
+ *
+ * The local control is calculated by summing the contributions of all the player's
+ * pieces around the trap, where each contribution is inversely proportional to the
+ * distance of the piece to the trap and directly proportional to the strength of the piece.
+ *
+ * @see https://icosahedral.net/downloads/djwu2015arimaa.pdf (page 12)
  */
 function calculateTrapControl(game: Arimaa, side: Side): number {
   let trapControlScore = 0;
@@ -230,13 +229,14 @@ function calculateTrapControl(game: Arimaa, side: Side): number {
         const piece = game.getPiece([row, col]);
         if (!piece || game.getSide(piece) !== side) continue;
 
+        // get manhattan distance
         const distance = Math.abs(row - trapRow) + Math.abs(col - trapCol);
         const strengthFactor = game.getPieceStrength(game.getPieceType(piece)!);
 
         localControl += strengthFactor / (distance + 1);
       }
     }
-
+    // Apply a logistic function to the local control to get a value between 0 and 1
     trapControlScore += 1 / (1 + Math.exp(-localControl));
   }
 
